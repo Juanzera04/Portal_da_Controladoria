@@ -1,0 +1,101 @@
+[
+  {
+    "id": 1,
+    "nome": "Revisar apuração IRPJ",
+    "descricao": "Verificar os lançamentos contábeis referentes à apuração do IRPJ do trimestre.",
+    "etapas": [
+      { "id": 1, "texto": "Baixar relatório de lançamentos", "concluida": true },
+      { "id": 2, "texto": "Conferir base de cálculo", "concluida": false },
+      { "id": 3, "texto": "Validar com gestor", "concluida": false }
+    ],
+    "prazo": "hoje",
+    "dataPrazo": "2025-05-21",
+    "urgencia": "alta",
+    "responsavel": null,
+    "status": "pendente",
+    "observacoes": "",
+    "retorno": "",
+    "criadoEm": "2025-05-20T09:00:00",
+    "criadoPor": 1,
+    "concluida": false
+  },
+  {
+    "id": 2,
+    "nome": "Conciliar contas a pagar",
+    "descricao": "Realizar a conciliação das contas a pagar com os extratos bancários.",
+    "etapas": [
+      { "id": 1, "texto": "Exportar extrato bancário", "concluida": true },
+      { "id": 2, "texto": "Comparar com contas a pagar", "concluida": false }
+    ],
+    "prazo": "semana",
+    "dataPrazo": "2025-05-23",
+    "urgencia": "media",
+    "responsavel": 1,
+    "status": "em andamento",
+    "observacoes": "Extrato já solicitado ao banco.",
+    "retorno": "",
+    "criadoEm": "2025-05-20T10:30:00",
+    "criadoPor": 2,
+    "concluida": false
+  },
+  {
+    "id": 3,
+    "nome": "Fechar mês de abril",
+    "descricao": "Realizar o fechamento contábil do mês de abril e enviar relatório à diretoria.",
+    "etapas": [
+      { "id": 1, "texto": "Lançar provisões", "concluida": false },
+      { "id": 2, "texto": "Reconciliar contas de resultado", "concluida": false },
+      { "id": 3, "texto": "Gerar DRE", "concluida": false },
+      { "id": 4, "texto": "Enviar para diretoria", "concluida": false }
+    ],
+    "prazo": "mes",
+    "dataPrazo": "2025-05-31",
+    "urgencia": "alta",
+    "responsavel": null,
+    "status": "pendente",
+    "observacoes": "",
+    "retorno": "",
+    "criadoEm": "2025-05-18T08:00:00",
+    "criadoPor": 1,
+    "concluida": false
+  },
+  {
+    "id": 4,
+    "nome": "Enviar DCTF",
+    "descricao": "Preparar e transmitir a DCTF do período.",
+    "etapas": [
+      { "id": 1, "texto": "Consolidar débitos e créditos", "concluida": true },
+      { "id": 2, "texto": "Preencher declaração", "concluida": true },
+      { "id": 3, "texto": "Transmitir via e-CAC", "concluida": true }
+    ],
+    "prazo": "hoje",
+    "dataPrazo": "2025-05-15",
+    "urgencia": "alta",
+    "responsavel": 3,
+    "status": "concluida",
+    "observacoes": "Transmitida com sucesso.",
+    "retorno": "Recibo de entrega gerado e arquivado.",
+    "criadoEm": "2025-05-14T07:00:00",
+    "criadoPor": 3,
+    "concluida": true
+  },
+  {
+    "id": 5,
+    "nome": "Verificar saldo de caixa diário",
+    "descricao": "Conferir posição de caixa e disponibilidades do dia.",
+    "etapas": [
+      { "id": 1, "texto": "Acessar sistema financeiro", "concluida": false },
+      { "id": 2, "texto": "Registrar posição no relatório", "concluida": false }
+    ],
+    "prazo": "diaria",
+    "dataPrazo": null,
+    "urgencia": "media",
+    "responsavel": 2,
+    "status": "pendente",
+    "observacoes": "",
+    "retorno": "",
+    "criadoEm": "2025-05-19T08:00:00",
+    "criadoPor": 1,
+    "concluida": false
+  }
+]

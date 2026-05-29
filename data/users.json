@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "nome": "Juan Rodrigues",
+    "cargo": "Analista de Controladoria",
+    "avatar": "JR"
+  },
+  {
+    "id": 2,
+    "nome": "Nicole Oliveira",
+    "cargo": "Assistente de Controladoria",
+    "avatar": "NIC"
+  },
+  {
+    "id": 3,
+    "nome": "Gabriel Amaral",
+    "cargo": "Analista de Controladoria",
+    "avatar": "GM"
+  }
+]
