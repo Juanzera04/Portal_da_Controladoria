@@ -13,8 +13,9 @@ import json
 import os
 
 # ── Paths ──────────────────────────────────────────────────
-BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR    = os.path.join(BASE_DIR, "data")
+# os.getcwd() é a raiz do projeto tanto localmente quanto no Render
+BASE_DIR     = os.getcwd()
+DATA_DIR     = os.path.join(BASE_DIR, "data")
 TAREFAS_FILE = os.path.join(DATA_DIR, "tarefas.json")
 USERS_FILE   = os.path.join(DATA_DIR, "users.json")
 

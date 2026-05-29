@@ -1,20 +1,20 @@
 [
   {
     "id": 1,
-    "nome": "Juan Rodrigues",
-    "cargo": "Analista de Controladoria",
-    "avatar": "JR"
+    "nome": "Bruno Kipper",
+    "cargo": "Controller",
+    "avatar": "BK"
   },
   {
     "id": 2,
-    "nome": "Nicole Oliveira",
-    "cargo": "Assistente de Controladoria",
-    "avatar": "NIC"
+    "nome": "Ana Lima",
+    "cargo": "Analista Contábil",
+    "avatar": "AL"
   },
   {
     "id": 3,
-    "nome": "Gabriel Amaral",
-    "cargo": "Analista de Controladoria",
-    "avatar": "GM"
+    "nome": "Carlos Mota",
+    "cargo": "Analista Fiscal",
+    "avatar": "CM"
   }
 ]
