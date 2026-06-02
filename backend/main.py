@@ -1,3 +1,4 @@
+cat > "/home/claude/Portal da Controladoria/backend/main.py" << 'EOF'
 """
 Portal da Controladoria — Backend FastAPI + PostgreSQL
 Os dados ficam em tabelas reais e nunca se perdem entre deploys.
@@ -336,3 +337,4 @@ app.mount("/data",   StaticFiles(directory=os.path.join(BASE_DIR, "data")),   na
 @app.get("/")
 def index():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
+EOF
