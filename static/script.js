@@ -64,7 +64,19 @@ async function boot() {
     console.error(e);
   }
   showLoading(false);
-  renderLoginUsers();
+
+  // ← Bloco novo: restaura sessão se houver
+  const savedId = localStorage.getItem("currentUserId");
+  if (savedId) {
+    const user = state.users.find(u => u.id === parseInt(savedId));
+    if (user) {
+      state.current = user;
+      enterApp();
+      return; // pula a tela de login
+    }
+  }
+
+  renderLoginUsers(); // só exibe login se não houver sessão salva
 }
 
 /** Zera diariaFeitaEm de tarefas marcadas em dias anteriores */
@@ -142,6 +154,7 @@ document.getElementById("btn-create-user").addEventListener("click", async () =>
 
 // ── Enter App ─────────────────────────────────────────────
 function enterApp() {
+  localStorage.setItem("currentUserId", state.current.id); 
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").classList.add("visible");
   document.getElementById("sb-user-name").textContent   = state.current.nome;
@@ -152,6 +165,7 @@ function enterApp() {
 
 document.getElementById("btn-logout").addEventListener("click", () => {
   state.current = null;
+  localStorage.removeItem("currentUserId");
   document.getElementById("app").classList.remove("visible");
   document.getElementById("login-screen").style.display = "";
   document.querySelectorAll(".user-option").forEach(o => o.classList.remove("selected"));
