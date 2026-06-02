@@ -155,26 +155,17 @@ document.getElementById("btn-create-user").addEventListener("click", async () =>
 });
 
 function renderFiltroUsuarios() {
-  // Remove filtro anterior se existir
   const existing = document.getElementById("filtro-usuario-bar");
   if (existing) existing.remove();
 
   const bar = document.createElement("div");
   bar.id = "filtro-usuario-bar";
-  bar.style.cssText = `
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 24px; flex-wrap: wrap;
-  `;
-
-  const label = document.createElement("span");
-  label.textContent = "Filtrar por:";
-  label.style.cssText = "font-size:12px; color:var(--muted); font-weight:500;";
-  bar.appendChild(label);
+  bar.style.cssText = "display:flex; align-items:center; gap:6px; flex-wrap:wrap;";
 
   // Botão "Todos"
   const btnTodos = document.createElement("button");
   btnTodos.textContent = "Todos";
-  btnTodos.className = "filtro-btn" + (state.filtroUsuario === null ? " filtro-ativo" : "");
+  btnTodos.className = "btn btn-ghost" + (state.filtroUsuario === null ? " filtro-ativo" : "");
   btnTodos.onclick = () => { state.filtroUsuario = null; renderFiltroUsuarios(); renderBoard(); };
   bar.appendChild(btnTodos);
 
@@ -182,14 +173,14 @@ function renderFiltroUsuarios() {
   state.users.forEach(u => {
     const btn = document.createElement("button");
     btn.innerHTML = `<span style="margin-right:4px">${u.avatar}</span>${u.nome}`;
-    btn.className = "filtro-btn" + (state.filtroUsuario === u.id ? " filtro-ativo" : "");
+    btn.className = "btn btn-ghost" + (state.filtroUsuario === u.id ? " filtro-ativo" : "");
     btn.onclick = () => { state.filtroUsuario = u.id; renderFiltroUsuarios(); renderBoard(); };
     bar.appendChild(btn);
   });
 
-  // Insere a barra antes do board
-  const board = document.getElementById("board");
-  board.parentNode.insertBefore(bar, board);
+  // ← Insere na topbar-actions, ao lado do "Ver concluídas"
+  const actions = document.querySelector(".topbar-actions");
+  actions.insertBefore(bar, actions.firstChild);
 }
 
 function enterApp() {
