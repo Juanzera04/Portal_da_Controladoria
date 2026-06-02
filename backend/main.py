@@ -18,7 +18,11 @@ from psycopg2.extras import RealDictCursor
 
 # ── Config ─────────────────────────────────────────────────
 DATABASE_URL = os.environ.get("DATABASE_URL")
-BASE_DIR     = os.getcwd()
+
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ── App ────────────────────────────────────────────────────
 app = FastAPI(title="Portal da Controladoria", version="2.0.0")
