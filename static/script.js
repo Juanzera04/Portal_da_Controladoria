@@ -225,6 +225,11 @@ function renderBoard() {
   const board = document.getElementById("board");
   board.innerHTML = "";
 
+  // ← esta linha estava faltando
+  const tarefasFiltradas = state.filtroUsuario !== null
+    ? state.tarefas.filter(t => t.responsavel === state.filtroUsuario)
+    : state.tarefas;
+
   COLUMNS.forEach(col => {
     const tasks = col.key === "diaria"
       ? tarefasFiltradas.filter(t => t.prazo === "diaria")
