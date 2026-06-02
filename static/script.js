@@ -13,6 +13,7 @@ let state = {
   users:   [],
   tarefas: [],
   current: null,   // usuário logado
+  filtroUsuario: null
 };
 
 // ── API helpers ───────────────────────────────────────────
@@ -153,7 +154,44 @@ document.getElementById("btn-create-user").addEventListener("click", async () =>
   }
 });
 
-// ── Enter App ─────────────────────────────────────────────
+function renderFiltroUsuarios() {
+  // Remove filtro anterior se existir
+  const existing = document.getElementById("filtro-usuario-bar");
+  if (existing) existing.remove();
+
+  const bar = document.createElement("div");
+  bar.id = "filtro-usuario-bar";
+  bar.style.cssText = `
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 24px; flex-wrap: wrap;
+  `;
+
+  const label = document.createElement("span");
+  label.textContent = "Filtrar por:";
+  label.style.cssText = "font-size:12px; color:var(--muted); font-weight:500;";
+  bar.appendChild(label);
+
+  // Botão "Todos"
+  const btnTodos = document.createElement("button");
+  btnTodos.textContent = "Todos";
+  btnTodos.className = "filtro-btn" + (state.filtroUsuario === null ? " filtro-ativo" : "");
+  btnTodos.onclick = () => { state.filtroUsuario = null; renderFiltroUsuarios(); renderBoard(); };
+  bar.appendChild(btnTodos);
+
+  // Um botão por usuário
+  state.users.forEach(u => {
+    const btn = document.createElement("button");
+    btn.innerHTML = `<span style="margin-right:4px">${u.avatar}</span>${u.nome}`;
+    btn.className = "filtro-btn" + (state.filtroUsuario === u.id ? " filtro-ativo" : "");
+    btn.onclick = () => { state.filtroUsuario = u.id; renderFiltroUsuarios(); renderBoard(); };
+    bar.appendChild(btn);
+  });
+
+  // Insere a barra antes do board
+  const board = document.getElementById("board");
+  board.parentNode.insertBefore(bar, board);
+}
+
 function enterApp() {
   document.cookie = `currentUserId=${state.current.id};path=/;max-age=86400`;
   document.getElementById("login-screen").style.display = "none";
@@ -161,6 +199,7 @@ function enterApp() {
   document.getElementById("sb-user-name").textContent   = state.current.nome;
   document.getElementById("sb-user-cargo").textContent  = state.current.cargo;
   document.getElementById("sb-user-avatar").textContent = state.current.avatar;
+  renderFiltroUsuarios();  // ← adicionar esta linha
   renderBoard();
 }
 
@@ -188,8 +227,8 @@ function renderBoard() {
 
   COLUMNS.forEach(col => {
     const tasks = col.key === "diaria"
-      ? state.tarefas.filter(t => t.prazo === "diaria")
-      : state.tarefas.filter(t => t.prazo === col.key && !t.concluida);
+      ? tarefasFiltradas.filter(t => t.prazo === "diaria")
+      : tarefasFiltradas.filter(t => t.prazo === col.key && !t.concluida);
 
     const count = col.key === "diaria"
       ? tasks.filter(t => !isDiariaFeitaHoje(t)).length
