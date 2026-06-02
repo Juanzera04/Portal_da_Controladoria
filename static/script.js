@@ -66,7 +66,7 @@ async function boot() {
   showLoading(false);
 
   // ← Bloco novo: restaura sessão se houver
-  const savedId = localStorage.getItem("currentUserId");
+  const savedId = document.cookie.split("; ").find(r => r.startsWith("currentUserId="))?.split("=")[1];
   if (savedId) {
     const user = state.users.find(u => u.id === parseInt(savedId));
     if (user) {
@@ -154,7 +154,7 @@ document.getElementById("btn-create-user").addEventListener("click", async () =>
 
 // ── Enter App ─────────────────────────────────────────────
 function enterApp() {
-  localStorage.setItem("currentUserId", state.current.id); 
+  document.cookie = `currentUserId=${state.current.id};path=/;max-age=86400`;
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").classList.add("visible");
   document.getElementById("sb-user-name").textContent   = state.current.nome;
@@ -165,7 +165,7 @@ function enterApp() {
 
 document.getElementById("btn-logout").addEventListener("click", () => {
   state.current = null;
-  localStorage.removeItem("currentUserId");
+  document.cookie = "currentUserId=;path=/;max-age=0";
   document.getElementById("app").classList.remove("visible");
   document.getElementById("login-screen").style.display = "";
   document.querySelectorAll(".user-option").forEach(o => o.classList.remove("selected"));
