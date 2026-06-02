@@ -908,3 +908,7 @@ select {
   color: #fff;
   border-color: var(--accent);
 }
+
+#filtro-usuario-bar {
+  flex-shrink: 0;
+}
