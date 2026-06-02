@@ -1,27 +1,19 @@
 /* ============================================================
    Portal da Controladoria — script.js
-   Todas as operações de dados passam pela API do backend.
    ============================================================ */
 
-// ── Config ────────────────────────────────────────────────
-// Em produção, troque pela URL do seu servidor (ex: Render)
+const API = "";
 
-const API = "";  // string vazia = mesmo host (backend serve o frontend)
-
-// ── State ─────────────────────────────────────────────────
 let state = {
-  users:   [],
-  tarefas: [],
-  current: null,   // usuário logado
-  filtroUsuario: null
+  users:        [],
+  tarefas:      [],
+  current:      null,
+  filtroUsuario: null,
 };
 
 // ── API helpers ───────────────────────────────────────────
 async function apiFetch(method, path, body = null) {
-  const opts = {
-    method,
-    headers: { "Content-Type": "application/json" },
-  };
+  const opts = { method, headers: { "Content-Type": "application/json" } };
   if (body !== null) opts.body = JSON.stringify(body);
   const res = await fetch(`${API}${path}`, opts);
   if (!res.ok) {
@@ -33,14 +25,13 @@ async function apiFetch(method, path, body = null) {
 }
 
 const api = {
-  getTarefas:       ()         => apiFetch("GET",    "/api/tarefas"),
-  criarTarefa:      (t)        => apiFetch("POST",   "/api/tarefas", t),
-  atualizarTarefa:  (id, t)    => apiFetch("PUT",    `/api/tarefas/${id}`, t),
-  patchTarefa:      (id, body) => apiFetch("PATCH",  `/api/tarefas/${id}`, body),
-  deletarTarefa:    (id)       => apiFetch("DELETE", `/api/tarefas/${id}`),
-
-  getUsuarios:      ()         => apiFetch("GET",    "/api/usuarios"),
-  criarUsuario:     (u)        => apiFetch("POST",   "/api/usuarios", u),
+  getTarefas:      ()         => apiFetch("GET",    "/api/tarefas"),
+  criarTarefa:     (t)        => apiFetch("POST",   "/api/tarefas", t),
+  atualizarTarefa: (id, t)    => apiFetch("PUT",    `/api/tarefas/${id}`, t),
+  patchTarefa:     (id, body) => apiFetch("PATCH",  `/api/tarefas/${id}`, body),
+  deletarTarefa:   (id)       => apiFetch("DELETE", `/api/tarefas/${id}`),
+  getUsuarios:     ()         => apiFetch("GET",    "/api/usuarios"),
+  criarUsuario:    (u)        => apiFetch("POST",   "/api/usuarios", u),
 };
 
 // ── Data helpers ──────────────────────────────────────────
@@ -67,21 +58,23 @@ async function boot() {
   }
   showLoading(false);
 
-  // ← Bloco novo: restaura sessão se houver
-  const savedId = document.cookie.split("; ").find(r => r.startsWith("currentUserId="))?.split("=")[1];
+  const savedId = document.cookie
+    .split("; ")
+    .find(r => r.startsWith("currentUserId="))
+    ?.split("=")[1];
+
   if (savedId) {
     const user = state.users.find(u => u.id === parseInt(savedId));
     if (user) {
       state.current = user;
       enterApp();
-      return; // pula a tela de login
+      return;
     }
   }
 
-  renderLoginUsers(); // só exibe login se não houver sessão salva
+  renderLoginUsers();
 }
 
-/** Zera diariaFeitaEm de tarefas marcadas em dias anteriores */
 async function resetDiariasSeNecessario() {
   const promises = [];
   state.tarefas.forEach(t => {
@@ -140,7 +133,6 @@ document.getElementById("btn-create-user").addEventListener("click", async () =>
   const nome  = document.getElementById("new-user-name").value.trim();
   const cargo = document.getElementById("new-user-cargo").value.trim();
   if (!nome) { toast("Informe o nome do usuário.", true); return; }
-
   try {
     const novo = await api.criarUsuario({ nome, cargo: cargo || "Colaborador" });
     state.users.push(novo);
@@ -154,35 +146,7 @@ document.getElementById("btn-create-user").addEventListener("click", async () =>
   }
 });
 
-function renderFiltroUsuarios() {
-  const existing = document.getElementById("filtro-usuario-bar");
-  if (existing) existing.remove();
-
-  const bar = document.createElement("div");
-  bar.id = "filtro-usuario-bar";
-  bar.style.cssText = "display:flex; align-items:center; gap:6px; flex-wrap:wrap;";
-
-  // Botão "Todos"
-  const btnTodos = document.createElement("button");
-  btnTodos.textContent = "Todos";
-  btnTodos.className = "btn btn-ghost" + (state.filtroUsuario === null ? " filtro-ativo" : "");
-  btnTodos.onclick = () => { state.filtroUsuario = null; renderFiltroUsuarios(); renderBoard(); };
-  bar.appendChild(btnTodos);
-
-  // Um botão por usuário
-  state.users.forEach(u => {
-    const btn = document.createElement("button");
-    btn.innerHTML = `<span style="margin-right:4px">${u.avatar}</span>${u.nome}`;
-    btn.className = "btn btn-ghost" + (state.filtroUsuario === u.id ? " filtro-ativo" : "");
-    btn.onclick = () => { state.filtroUsuario = u.id; renderFiltroUsuarios(); renderBoard(); };
-    bar.appendChild(btn);
-  });
-
-  // ← Insere na topbar-actions, ao lado do "Ver concluídas"
-  const actions = document.querySelector(".topbar-actions");
-  actions.insertBefore(bar, actions.firstChild);
-}
-
+// ── Enter / Logout ────────────────────────────────────────
 function enterApp() {
   document.cookie = `currentUserId=${state.current.id};path=/;max-age=86400`;
   document.getElementById("login-screen").style.display = "none";
@@ -190,19 +154,96 @@ function enterApp() {
   document.getElementById("sb-user-name").textContent   = state.current.nome;
   document.getElementById("sb-user-cargo").textContent  = state.current.cargo;
   document.getElementById("sb-user-avatar").textContent = state.current.avatar;
-  renderFiltroUsuarios();  // ← adicionar esta linha
+  renderFiltroUsuarios();
   renderBoard();
 }
 
 document.getElementById("btn-logout").addEventListener("click", () => {
-  state.current = null;
+  state.current      = null;
+  state.filtroUsuario = null;
   document.cookie = "currentUserId=;path=/;max-age=0";
   document.getElementById("app").classList.remove("visible");
   document.getElementById("login-screen").style.display = "";
   document.querySelectorAll(".user-option").forEach(o => o.classList.remove("selected"));
   document.getElementById("btn-enter").disabled = true;
   delete document.getElementById("btn-enter").dataset.userId;
+  const bar = document.getElementById("filtro-usuario-bar");
+  if (bar) bar.remove();
 });
+
+// ── Filtro de Usuário ─────────────────────────────────────
+function renderFiltroUsuarios() {
+  const existing = document.getElementById("filtro-usuario-bar");
+  if (existing) existing.remove();
+
+  const bar = document.createElement("div");
+  bar.id = "filtro-usuario-bar";
+  bar.style.cssText = [
+    "display:flex",
+    "align-items:center",
+    "gap:6px",
+    "flex-wrap:wrap",
+    "padding:8px 24px",
+    "border-bottom:1px solid var(--border)",
+    "background:var(--surface)",
+  ].join(";");
+
+  // Label
+  const label = document.createElement("span");
+  label.textContent = "Filtrar:";
+  label.style.cssText = "font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:4px;";
+  bar.appendChild(label);
+
+  // Botão Todos
+  const btnTodos = document.createElement("button");
+  btnTodos.textContent = "Todos";
+  btnTodos.style.cssText = buildFiltroStyle(state.filtroUsuario === null);
+  btnTodos.onclick = () => {
+    state.filtroUsuario = null;
+    renderFiltroUsuarios();
+    renderBoard();
+  };
+  bar.appendChild(btnTodos);
+
+  // Botão por usuário
+  state.users.forEach(u => {
+    const btn = document.createElement("button");
+    btn.innerHTML = `${u.avatar} ${u.nome}`;
+    btn.style.cssText = buildFiltroStyle(state.filtroUsuario === u.id);
+    btn.onclick = () => {
+      state.filtroUsuario = u.id;
+      renderFiltroUsuarios();
+      renderBoard();
+    };
+    bar.appendChild(btn);
+  });
+
+  // Insere entre topbar e board
+  const main   = document.getElementById("main");
+  const topbar = document.getElementById("topbar");
+  main.insertBefore(bar, topbar.nextSibling);
+}
+
+function buildFiltroStyle(ativo) {
+  const base = [
+    "display:inline-flex",
+    "align-items:center",
+    "gap:4px",
+    "padding:4px 12px",
+    "border-radius:999px",
+    "border:1px solid var(--border)",
+    "font-size:12px",
+    "cursor:pointer",
+    "transition:all .15s",
+    "font-family:inherit",
+  ].join(";");
+
+  const estado = ativo
+    ? "background:#22c55e;color:#fff;border-color:#22c55e;"
+    : "background:transparent;color:var(--muted);";
+
+  return base + ";" + estado;
+}
 
 // ── Board ─────────────────────────────────────────────────
 const COLUMNS = [
@@ -216,7 +257,6 @@ function renderBoard() {
   const board = document.getElementById("board");
   board.innerHTML = "";
 
-  // ← esta linha estava faltando
   const tarefasFiltradas = state.filtroUsuario !== null
     ? state.tarefas.filter(t => t.responsavel === state.filtroUsuario)
     : state.tarefas;
@@ -428,12 +468,12 @@ function renderEtapasTemp() {
 }
 
 document.getElementById("btn-save-create").addEventListener("click", async () => {
-  const nome     = document.getElementById("input-nome").value.trim();
-  const desc     = document.getElementById("input-desc").value.trim();
-  const prazo    = document.getElementById("input-prazo").value;
+  const nome      = document.getElementById("input-nome").value.trim();
+  const desc      = document.getElementById("input-desc").value.trim();
+  const prazo     = document.getElementById("input-prazo").value;
   const dataPrazo = document.getElementById("input-data-prazo").value || null;
-  const urgencia = document.getElementById("input-urgencia").value;
-  const respId   = document.getElementById("input-responsavel").value;
+  const urgencia  = document.getElementById("input-urgencia").value;
+  const respId    = document.getElementById("input-responsavel").value;
 
   if (!nome)  { toast("Informe o nome da tarefa.", true); return; }
   if (!prazo) { toast("Selecione o tipo de prazo.", true); return; }
@@ -476,7 +516,6 @@ function openDetail(id) {
   document.getElementById("detail-subtitle").textContent = `Criado em ${formatDate(t.criadoEm)}`;
   document.getElementById("detail-desc").textContent     = t.descricao || "Sem descrição.";
 
-  // checklist
   const checklist = document.getElementById("detail-checklist");
   checklist.innerHTML = "";
   if (t.etapas.length === 0) {
@@ -497,7 +536,7 @@ function openDetail(id) {
           openDetail(id);
           renderBoard();
         } catch (err) {
-          etapa.concluida = !etapa.concluida; // reverte em caso de erro
+          etapa.concluida = !etapa.concluida;
           toast(err.message, true);
         }
       });
@@ -505,12 +544,10 @@ function openDetail(id) {
     });
   }
 
-  // meta
   document.getElementById("detail-status").textContent   = labelStatus(t.status);
   document.getElementById("detail-urgencia").textContent = labelUrgencia(t.urgencia);
   document.getElementById("detail-prazo").textContent    = t.dataPrazo ? formatDate(t.dataPrazo) : "—";
 
-  // select responsável
   const sel = document.getElementById("detail-responsavel");
   sel.innerHTML = '<option value="">Sem responsável</option>';
   state.users.forEach(u => {
@@ -526,7 +563,6 @@ function openDetail(id) {
     catch (err) { toast(err.message, true); }
   };
 
-  // select status
   const selStatus = document.getElementById("detail-status-sel");
   selStatus.value = t.status;
   selStatus.onchange = async () => {
@@ -538,7 +574,6 @@ function openDetail(id) {
     } catch (err) { toast(err.message, true); }
   };
 
-  // observações e retorno — salva com debounce
   document.getElementById("detail-obs").value     = t.observacoes || "";
   document.getElementById("detail-retorno").value = t.retorno || "";
 
@@ -554,7 +589,6 @@ function openDetail(id) {
     catch (err) { toast(err.message, true); }
   }, 600);
 
-  // botão concluir
   const btnConcluir = document.getElementById("btn-concluir");
   btnConcluir.textContent = t.concluida ? "Reabrir Tarefa" : "Concluir Tarefa";
   btnConcluir.className   = t.concluida ? "btn btn-ghost"  : "btn btn-primary";
@@ -569,7 +603,7 @@ function openDetail(id) {
       if (document.getElementById("concluded-screen").classList.contains("visible")) renderConcluded();
       toast(t.concluida ? "Tarefa concluída!" : "Tarefa reaberta.");
     } catch (err) {
-      t.concluida = !t.concluida; // reverte
+      t.concluida = !t.concluida;
       t.status    = t.concluida ? "concluida" : "pendente";
       toast(err.message, true);
     }
@@ -592,6 +626,7 @@ function formatDate(str) {
 function labelStatus(s) {
   return { pendente: "Pendente", "em andamento": "Em andamento", concluida: "Concluída" }[s] || s;
 }
+
 function labelUrgencia(u) {
   return { alta: "🔴 Alta", media: "🟡 Média", baixa: "🔵 Baixa" }[u] || u;
 }
@@ -599,7 +634,7 @@ function labelUrgencia(u) {
 function toast(msg, error = false) {
   const c  = document.getElementById("toast-container");
   const el = document.createElement("div");
-  el.className  = `toast ${error ? "error" : ""}`;
+  el.className   = `toast ${error ? "error" : ""}`;
   el.textContent = msg;
   c.appendChild(el);
   setTimeout(() => el.remove(), 3000);
