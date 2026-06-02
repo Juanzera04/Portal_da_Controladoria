@@ -13,8 +13,8 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import os
 import json
-import psycopg
-from psycopg.rows import dict_row
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 # ── Config ─────────────────────────────────────────────────
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -32,7 +32,7 @@ app.add_middleware(
 
 # ── DB helpers ─────────────────────────────────────────────
 def get_conn():
-    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 def init_db():
     """Cria as tabelas se não existirem e importa os JSONs na primeira vez."""
@@ -50,7 +50,6 @@ def init_db():
             """)
 
             # Tabela de tarefas
-            # etapas é armazenado como JSONB (lista de objetos)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS tarefas (
                     id              SERIAL PRIMARY KEY,
@@ -84,7 +83,6 @@ def init_db():
                             "INSERT INTO usuarios (id, nome, cargo, avatar) VALUES (%s, %s, %s, %s)",
                             (u["id"], u["nome"], u.get("cargo", "Colaborador"), u.get("avatar"))
                         )
-                    # Ajusta a sequence para continuar do ID correto
                     cur.execute("SELECT setval('usuarios_id_seq', (SELECT MAX(id) FROM usuarios))")
                     conn.commit()
 
@@ -253,7 +251,6 @@ def atualizar_tarefa(tarefa_id: int, tarefa: Tarefa):
 
 @app.patch("/api/tarefas/{tarefa_id}")
 def patch_tarefa(tarefa_id: int, campos: dict):
-    # Mapeia os nomes camelCase do frontend para snake_case do banco
     col_map = {
         "nome": "nome", "descricao": "descricao", "etapas": "etapas",
         "prazo": "prazo", "dataPrazo": "data_prazo", "urgencia": "urgencia",
