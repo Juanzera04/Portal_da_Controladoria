@@ -1,4 +1,3 @@
-cat > "/home/claude/Portal da Controladoria/backend/main.py" << 'EOF'
 """
 Portal da Controladoria — Backend FastAPI + PostgreSQL
 Os dados ficam em tabelas reais e nunca se perdem entre deploys.
@@ -14,8 +13,8 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import os
 import json
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import psycopg
+from psycopg.rows import dict_row
 
 # ── Config ─────────────────────────────────────────────────
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -33,7 +32,7 @@ app.add_middleware(
 
 # ── DB helpers ─────────────────────────────────────────────
 def get_conn():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
 def init_db():
     """Cria as tabelas se não existirem e importa os JSONs na primeira vez."""
@@ -337,4 +336,3 @@ app.mount("/data",   StaticFiles(directory=os.path.join(BASE_DIR, "data")),   na
 @app.get("/")
 def index():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
-EOF
