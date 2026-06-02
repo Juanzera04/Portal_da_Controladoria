@@ -5,6 +5,7 @@
 
 // ── Config ────────────────────────────────────────────────
 // Em produção, troque pela URL do seu servidor (ex: Render)
+
 const API = "";  // string vazia = mesmo host (backend serve o frontend)
 
 // ── State ─────────────────────────────────────────────────
