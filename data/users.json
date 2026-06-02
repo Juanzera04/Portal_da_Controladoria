@@ -1,20 +1,3 @@
 [
-  {
-    "id": 1,
-    "nome": "Bruno Kipper",
-    "cargo": "Controller",
-    "avatar": "BK"
-  },
-  {
-    "id": 2,
-    "nome": "Ana Lima",
-    "cargo": "Analista Contábil",
-    "avatar": "AL"
-  },
-  {
-    "id": 3,
-    "nome": "Carlos Mota",
-    "cargo": "Analista Fiscal",
-    "avatar": "CM"
-  }
+
 ]

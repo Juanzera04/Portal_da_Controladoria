@@ -1,6 +1,7 @@
 """
-Portal da Controladoria — Backend FastAPI
-Serve os arquivos estáticos e expõe a API REST para tarefas e usuários.
+Portal da Controladoria — Backend FastAPI + PostgreSQL
+Os dados ficam em tabelas reais e nunca se perdem entre deploys.
+A conexão é lida da variável de ambiente DATABASE_URL.
 """
 
 from fastapi import FastAPI, HTTPException
@@ -9,18 +10,18 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
-import json
+from datetime import datetime, timezone
 import os
+import json
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-# ── Paths ──────────────────────────────────────────────────
-# os.getcwd() é a raiz do projeto tanto localmente quanto no Render
+# ── Config ─────────────────────────────────────────────────
+DATABASE_URL = os.environ.get("DATABASE_URL")
 BASE_DIR     = os.getcwd()
-DATA_DIR     = os.path.join(BASE_DIR, "data")
-TAREFAS_FILE = os.path.join(DATA_DIR, "tarefas.json")
-USERS_FILE   = os.path.join(DATA_DIR, "users.json")
 
 # ── App ────────────────────────────────────────────────────
-app = FastAPI(title="Portal da Controladoria", version="1.0.0")
+app = FastAPI(title="Portal da Controladoria", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,17 +30,121 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── JSON helpers ───────────────────────────────────────────
-def read_json(path: str) -> list:
-    if not os.path.exists(path):
-        return []
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+# ── DB helpers ─────────────────────────────────────────────
+def get_conn():
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
-def write_json(path: str, data: list) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+def init_db():
+    """Cria as tabelas se não existirem e importa os JSONs na primeira vez."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+
+            # Tabela de usuários
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id        SERIAL PRIMARY KEY,
+                    nome      TEXT NOT NULL,
+                    cargo     TEXT DEFAULT 'Colaborador',
+                    avatar    TEXT
+                )
+            """)
+
+            # Tabela de tarefas
+            # etapas é armazenado como JSONB (lista de objetos)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS tarefas (
+                    id              SERIAL PRIMARY KEY,
+                    nome            TEXT NOT NULL,
+                    descricao       TEXT DEFAULT '',
+                    etapas          JSONB DEFAULT '[]',
+                    prazo           TEXT NOT NULL,
+                    data_prazo      TEXT,
+                    urgencia        TEXT DEFAULT 'media',
+                    responsavel     INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+                    status          TEXT DEFAULT 'pendente',
+                    observacoes     TEXT DEFAULT '',
+                    retorno         TEXT DEFAULT '',
+                    criado_em       TEXT,
+                    criado_por      INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+                    concluida       BOOLEAN DEFAULT FALSE,
+                    diaria_feita_em TEXT
+                )
+            """)
+            conn.commit()
+
+            # Importa usuários do JSON só se a tabela estiver vazia
+            cur.execute("SELECT COUNT(*) as c FROM usuarios")
+            if cur.fetchone()["c"] == 0:
+                users_file = os.path.join(BASE_DIR, "data", "users.json")
+                if os.path.exists(users_file):
+                    with open(users_file, encoding="utf-8") as f:
+                        users = json.load(f)
+                    for u in users:
+                        cur.execute(
+                            "INSERT INTO usuarios (id, nome, cargo, avatar) VALUES (%s, %s, %s, %s)",
+                            (u["id"], u["nome"], u.get("cargo", "Colaborador"), u.get("avatar"))
+                        )
+                    # Ajusta a sequence para continuar do ID correto
+                    cur.execute("SELECT setval('usuarios_id_seq', (SELECT MAX(id) FROM usuarios))")
+                    conn.commit()
+
+            # Importa tarefas do JSON só se a tabela estiver vazia
+            cur.execute("SELECT COUNT(*) as c FROM tarefas")
+            if cur.fetchone()["c"] == 0:
+                tarefas_file = os.path.join(BASE_DIR, "data", "tarefas.json")
+                if os.path.exists(tarefas_file):
+                    with open(tarefas_file, encoding="utf-8") as f:
+                        tarefas = json.load(f)
+                    for t in tarefas:
+                        cur.execute("""
+                            INSERT INTO tarefas
+                                (id, nome, descricao, etapas, prazo, data_prazo, urgencia,
+                                 responsavel, status, observacoes, retorno, criado_em,
+                                 criado_por, concluida, diaria_feita_em)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        """, (
+                            t["id"], t["nome"], t.get("descricao",""),
+                            json.dumps(t.get("etapas", []), ensure_ascii=False),
+                            t["prazo"], t.get("dataPrazo"),
+                            t.get("urgencia","media"), t.get("responsavel"),
+                            t.get("status","pendente"), t.get("observacoes",""),
+                            t.get("retorno",""), t.get("criadoEm"),
+                            t.get("criadoPor"), t.get("concluida", False),
+                            t.get("diariaFeitaEm")
+                        ))
+                    cur.execute("SELECT setval('tarefas_id_seq', (SELECT MAX(id) FROM tarefas))")
+                    conn.commit()
+
+def row_to_tarefa(row: dict) -> dict:
+    """Converte uma linha do banco para o formato esperado pelo frontend."""
+    etapas = row["etapas"]
+    if isinstance(etapas, str):
+        etapas = json.loads(etapas)
+    return {
+        "id":             row["id"],
+        "nome":           row["nome"],
+        "descricao":      row["descricao"] or "",
+        "etapas":         etapas or [],
+        "prazo":          row["prazo"],
+        "dataPrazo":      row["data_prazo"],
+        "urgencia":       row["urgencia"],
+        "responsavel":    row["responsavel"],
+        "status":         row["status"],
+        "observacoes":    row["observacoes"] or "",
+        "retorno":        row["retorno"] or "",
+        "criadoEm":       row["criado_em"],
+        "criadoPor":      row["criado_por"],
+        "concluida":      row["concluida"],
+        "diariaFeitaEm":  row["diaria_feita_em"],
+    }
+
+def row_to_usuario(row: dict) -> dict:
+    return {
+        "id":     row["id"],
+        "nome":   row["nome"],
+        "cargo":  row["cargo"],
+        "avatar": row["avatar"],
+    }
 
 # ── Models ─────────────────────────────────────────────────
 class Etapa(BaseModel):
@@ -52,11 +157,11 @@ class Tarefa(BaseModel):
     nome: str
     descricao: Optional[str] = ""
     etapas: Optional[List[Etapa]] = []
-    prazo: str                          # diaria | hoje | semana | mes
+    prazo: str
     dataPrazo: Optional[str] = None
-    urgencia: Optional[str] = "media"  # alta | media | baixa
+    urgencia: Optional[str] = "media"
     responsavel: Optional[int] = None
-    status: Optional[str] = "pendente" # pendente | em andamento | concluida
+    status: Optional[str] = "pendente"
     observacoes: Optional[str] = ""
     retorno: Optional[str] = ""
     criadoEm: Optional[str] = None
@@ -70,75 +175,127 @@ class Usuario(BaseModel):
     cargo: Optional[str] = "Colaborador"
     avatar: Optional[str] = None
 
+# ── Startup ────────────────────────────────────────────────
+@app.on_event("startup")
+def startup():
+    if DATABASE_URL:
+        init_db()
+
 # ══════════════════════════════════════════════════════════
 # ROTAS — TAREFAS
 # ══════════════════════════════════════════════════════════
 
 @app.get("/api/tarefas")
 def listar_tarefas():
-    """Retorna todas as tarefas."""
-    return read_json(TAREFAS_FILE)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM tarefas ORDER BY id")
+            return [row_to_tarefa(r) for r in cur.fetchall()]
 
 
 @app.post("/api/tarefas", status_code=201)
 def criar_tarefa(tarefa: Tarefa):
-    """Cria uma nova tarefa e persiste no JSON."""
-    tarefas = read_json(TAREFAS_FILE)
-
-    # Gera ID único
-    novo_id = max((t["id"] for t in tarefas), default=0) + 1
-    nova = tarefa.model_dump()
-    nova["id"] = novo_id
-
-    from datetime import datetime, timezone
-    if not nova.get("criadoEm"):
-        nova["criadoEm"] = datetime.now(timezone.utc).isoformat()
-
-    tarefas.append(nova)
-    write_json(TAREFAS_FILE, tarefas)
-    return nova
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            criado_em = tarefa.criadoEm or datetime.now(timezone.utc).isoformat()
+            etapas_json = json.dumps(
+                [e.model_dump() for e in tarefa.etapas], ensure_ascii=False
+            )
+            cur.execute("""
+                INSERT INTO tarefas
+                    (nome, descricao, etapas, prazo, data_prazo, urgencia,
+                     responsavel, status, observacoes, retorno, criado_em,
+                     criado_por, concluida, diaria_feita_em)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                RETURNING *
+            """, (
+                tarefa.nome, tarefa.descricao, etapas_json,
+                tarefa.prazo, tarefa.dataPrazo, tarefa.urgencia,
+                tarefa.responsavel, tarefa.status, tarefa.observacoes,
+                tarefa.retorno, criado_em, tarefa.criadoPor,
+                tarefa.concluida, tarefa.diariaFeitaEm
+            ))
+            conn.commit()
+            return row_to_tarefa(cur.fetchone())
 
 
 @app.put("/api/tarefas/{tarefa_id}")
 def atualizar_tarefa(tarefa_id: int, tarefa: Tarefa):
-    """Substitui uma tarefa existente pelo ID."""
-    tarefas = read_json(TAREFAS_FILE)
-    idx = next((i for i, t in enumerate(tarefas) if t["id"] == tarefa_id), None)
-
-    if idx is None:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
-
-    atualizada = tarefa.model_dump()
-    atualizada["id"] = tarefa_id          # garante que o ID não muda
-    tarefas[idx] = atualizada
-    write_json(TAREFAS_FILE, tarefas)
-    return atualizada
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            etapas_json = json.dumps(
+                [e.model_dump() for e in tarefa.etapas], ensure_ascii=False
+            )
+            cur.execute("""
+                UPDATE tarefas SET
+                    nome=%(nome)s, descricao=%(descricao)s, etapas=%(etapas)s,
+                    prazo=%(prazo)s, data_prazo=%(data_prazo)s, urgencia=%(urgencia)s,
+                    responsavel=%(responsavel)s, status=%(status)s,
+                    observacoes=%(observacoes)s, retorno=%(retorno)s,
+                    concluida=%(concluida)s, diaria_feita_em=%(diaria_feita_em)s
+                WHERE id=%(id)s
+                RETURNING *
+            """, {
+                "id": tarefa_id, "nome": tarefa.nome,
+                "descricao": tarefa.descricao, "etapas": etapas_json,
+                "prazo": tarefa.prazo, "data_prazo": tarefa.dataPrazo,
+                "urgencia": tarefa.urgencia, "responsavel": tarefa.responsavel,
+                "status": tarefa.status, "observacoes": tarefa.observacoes,
+                "retorno": tarefa.retorno, "concluida": tarefa.concluida,
+                "diaria_feita_em": tarefa.diariaFeitaEm,
+            })
+            conn.commit()
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+            return row_to_tarefa(row)
 
 
 @app.patch("/api/tarefas/{tarefa_id}")
 def patch_tarefa(tarefa_id: int, campos: dict):
-    """Atualiza campos específicos de uma tarefa (patch parcial)."""
-    tarefas = read_json(TAREFAS_FILE)
-    idx = next((i for i, t in enumerate(tarefas) if t["id"] == tarefa_id), None)
+    # Mapeia os nomes camelCase do frontend para snake_case do banco
+    col_map = {
+        "nome": "nome", "descricao": "descricao", "etapas": "etapas",
+        "prazo": "prazo", "dataPrazo": "data_prazo", "urgencia": "urgencia",
+        "responsavel": "responsavel", "status": "status",
+        "observacoes": "observacoes", "retorno": "retorno",
+        "concluida": "concluida", "diariaFeitaEm": "diaria_feita_em",
+    }
+    sets, values = [], []
+    for key, val in campos.items():
+        col = col_map.get(key)
+        if not col:
+            continue
+        if col == "etapas" and isinstance(val, list):
+            val = json.dumps(val, ensure_ascii=False)
+        sets.append(f"{col} = %s")
+        values.append(val)
 
-    if idx is None:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    if not sets:
+        raise HTTPException(status_code=400, detail="Nenhum campo válido para atualizar")
 
-    tarefas[idx].update(campos)
-    write_json(TAREFAS_FILE, tarefas)
-    return tarefas[idx]
+    values.append(tarefa_id)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE tarefas SET {', '.join(sets)} WHERE id = %s RETURNING *",
+                values
+            )
+            conn.commit()
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+            return row_to_tarefa(row)
 
 
 @app.delete("/api/tarefas/{tarefa_id}", status_code=204)
 def deletar_tarefa(tarefa_id: int):
-    """Remove uma tarefa pelo ID."""
-    tarefas = read_json(TAREFAS_FILE)
-    novas = [t for t in tarefas if t["id"] != tarefa_id]
-
-    if len(novas) == len(tarefas):
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
-
-    write_json(TAREFAS_FILE, novas)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM tarefas WHERE id = %s RETURNING id", (tarefa_id,))
+            conn.commit()
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     return None
 
 # ══════════════════════════════════════════════════════════
@@ -147,34 +304,34 @@ def deletar_tarefa(tarefa_id: int):
 
 @app.get("/api/usuarios")
 def listar_usuarios():
-    """Retorna todos os usuários."""
-    return read_json(USERS_FILE)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM usuarios ORDER BY id")
+            return [row_to_usuario(r) for r in cur.fetchall()]
 
 
 @app.post("/api/usuarios", status_code=201)
 def criar_usuario(usuario: Usuario):
-    """Cria um novo usuário."""
-    usuarios = read_json(USERS_FILE)
+    avatar = usuario.avatar
+    if not avatar:
+        partes = usuario.nome.split()
+        avatar = "".join(p[0] for p in partes[:2]).upper()
 
-    novo_id = max((u["id"] for u in usuarios), default=0) + 1
-    novo = usuario.model_dump()
-    novo["id"] = novo_id
-
-    # Gera avatar/iniciais se não fornecido
-    if not novo.get("avatar"):
-        partes = novo["nome"].split()
-        novo["avatar"] = "".join(p[0] for p in partes[:2]).upper()
-
-    usuarios.append(novo)
-    write_json(USERS_FILE, usuarios)
-    return novo
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO usuarios (nome, cargo, avatar) VALUES (%s, %s, %s) RETURNING *",
+                (usuario.nome, usuario.cargo or "Colaborador", avatar)
+            )
+            conn.commit()
+            return row_to_usuario(cur.fetchone())
 
 # ══════════════════════════════════════════════════════════
-# SERVE O FRONTEND (deve ficar por último)
+# SERVE O FRONTEND
 # ══════════════════════════════════════════════════════════
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
-app.mount("/data",   StaticFiles(directory=DATA_DIR), name="data")
+app.mount("/data",   StaticFiles(directory=os.path.join(BASE_DIR, "data")),   name="data")
 
 @app.get("/")
 def index():
