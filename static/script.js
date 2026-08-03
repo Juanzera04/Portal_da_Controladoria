@@ -4,6 +4,19 @@
 
 const API = "";
 
+// ── Tema (paleta de cor) ──────────────────────────────────
+function applyAccent(name) {
+  document.documentElement.setAttribute("data-accent", name);
+  localStorage.setItem("accent", name);
+  document.querySelectorAll(".theme-swatch").forEach(b =>
+    b.classList.toggle("selected", b.dataset.accent === name)
+  );
+}
+document.querySelectorAll(".theme-swatch").forEach(b =>
+  b.addEventListener("click", () => applyAccent(b.dataset.accent))
+);
+applyAccent(localStorage.getItem("accent") || "green");
+
 let state = {
   users:        [],
   tarefas:      [],
@@ -32,6 +45,8 @@ const api = {
   deletarTarefa:   (id)       => apiFetch("DELETE", `/api/tarefas/${id}`),
   getUsuarios:     ()         => apiFetch("GET",    "/api/usuarios"),
   criarUsuario:    (u)        => apiFetch("POST",   "/api/usuarios", u),
+  atualizarUsuario:(id, u)    => apiFetch("PUT",    `/api/usuarios/${id}`, u),
+  deletarUsuario:  (id)       => apiFetch("DELETE", `/api/usuarios/${id}`),
 };
 
 // ── Data helpers ──────────────────────────────────────────
@@ -154,6 +169,7 @@ function enterApp() {
   document.getElementById("sb-user-name").textContent   = state.current.nome;
   document.getElementById("sb-user-cargo").textContent  = state.current.cargo;
   document.getElementById("sb-user-avatar").textContent = state.current.avatar;
+  document.getElementById("nav-admin").classList.toggle("hidden", !state.current.isAdmin);
   renderFiltroUsuarios();
   renderBoard();
 }
@@ -169,6 +185,8 @@ document.getElementById("btn-logout").addEventListener("click", () => {
   delete document.getElementById("btn-enter").dataset.userId;
   const bar = document.getElementById("filtro-usuario-bar");
   if (bar) bar.remove();
+  document.getElementById("nav-admin").classList.add("hidden");
+  showBoardView();
 });
 
 // ── Filtro de Usuário ─────────────────────────────────────
@@ -239,7 +257,7 @@ function buildFiltroStyle(ativo) {
   ].join(";");
 
   const estado = ativo
-    ? "background:#22c55e;color:#fff;border-color:#22c55e;"
+    ? "background:var(--green);color:#fff;border-color:var(--green);"
     : "background:transparent;color:var(--muted);";
 
   return base + ";" + estado;
@@ -250,7 +268,7 @@ const COLUMNS = [
   { key: "diaria", label: "Tarefas Diárias",  color: "#3b82f6" },
   { key: "hoje",   label: "Tarefas de Hoje",   color: "#ef4444" },
   { key: "semana", label: "Tarefas da Semana", color: "#f59e0b" },
-  { key: "mes",    label: "Tarefas do Mês",    color: "#22c55e" },
+  { key: "mes",    label: "Tarefas do Mês",    color: "var(--green)" },
 ];
 
 function renderBoard() {
@@ -319,6 +337,14 @@ function buildDiariaCard(t) {
         ${feita ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
       </button>
       <div class="card-title diaria-title">${t.nome}</div>
+      <button class="diaria-delete" title="Excluir tarefa diária">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </button>
     </div>
     <div class="card-meta" style="padding-left:30px">
       <div class="urgency-dot ${urgClass}"></div>
@@ -338,6 +364,20 @@ function buildDiariaCard(t) {
       const atualizada = await api.patchTarefa(t.id, { diariaFeitaEm: novaData });
       Object.assign(t, atualizada);
       renderBoard();
+    } catch (err) {
+      toast(err.message, true);
+    }
+  });
+
+  el.querySelector(".diaria-delete").addEventListener("click", async e => {
+    e.stopPropagation();
+    const ok = await showConfirm(`Excluir a tarefa diária "${t.nome}" permanentemente? Essa ação não pode ser desfeita.`);
+    if (!ok) return;
+    try {
+      await api.deletarTarefa(t.id);
+      state.tarefas = state.tarefas.filter(x => x.id !== t.id);
+      renderBoard();
+      toast("Tarefa diária excluída.");
     } catch (err) {
       toast(err.message, true);
     }
@@ -404,6 +444,270 @@ function renderConcluded() {
   done.forEach(t => list.appendChild(buildCard(t)));
 }
 
+// ── View: navegação entre Board / Gerenciador de Base ─────
+function showBoardView() {
+  document.getElementById("admin-screen").classList.remove("visible");
+  document.getElementById("concluded-screen").classList.remove("visible");
+  document.getElementById("board").classList.remove("hidden");
+  document.getElementById("nav-board").classList.add("active");
+  document.getElementById("nav-admin").classList.remove("active");
+}
+
+document.getElementById("nav-board").addEventListener("click", showBoardView);
+
+document.getElementById("nav-admin").addEventListener("click", () => {
+  document.getElementById("board").classList.add("hidden");
+  document.getElementById("concluded-screen").classList.remove("visible");
+  document.getElementById("admin-screen").classList.add("visible");
+  document.getElementById("nav-admin").classList.add("active");
+  document.getElementById("nav-board").classList.remove("active");
+  renderAdminTarefas();
+  renderAdminUsuarios();
+});
+
+document.getElementById("btn-back-board-admin").addEventListener("click", showBoardView);
+
+document.getElementById("admin-tab-tarefas").addEventListener("click", () => switchAdminTab("tarefas"));
+document.getElementById("admin-tab-usuarios").addEventListener("click", () => switchAdminTab("usuarios"));
+
+function switchAdminTab(tab) {
+  document.getElementById("admin-tab-tarefas").classList.toggle("active", tab === "tarefas");
+  document.getElementById("admin-tab-usuarios").classList.toggle("active", tab === "usuarios");
+  document.getElementById("admin-tarefas-wrap").classList.toggle("hidden", tab !== "tarefas");
+  document.getElementById("admin-usuarios-wrap").classList.toggle("hidden", tab !== "usuarios");
+}
+
+// ── Gerenciador de Base: tabelas ──────────────────────────
+function renderAdminTarefas() {
+  const tbody = document.getElementById("admin-tarefas-tbody");
+  tbody.innerHTML = "";
+  state.tarefas.forEach(t => {
+    const resp = t.responsavel ? state.users.find(u => u.id === t.responsavel) : null;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${t.id}</td>
+      <td class="admin-nome-cell">${t.nome}</td>
+      <td>${t.prazo}</td>
+      <td>${labelStatus(t.status)}</td>
+      <td>${labelUrgencia(t.urgencia)}</td>
+      <td>${resp ? resp.nome : "—"}</td>
+      <td>${t.concluida ? "Sim" : "Não"}</td>
+      <td>
+        <div class="admin-row-actions">
+          <button class="btn-admin-action" data-action="edit">Editar</button>
+          <button class="btn-admin-action danger" data-action="delete">Excluir</button>
+        </div>
+      </td>`;
+    tr.querySelector('[data-action="edit"]').addEventListener("click", () => openAdminTarefaModal(t.id));
+    tr.querySelector('[data-action="delete"]').addEventListener("click", () => deleteAdminTarefa(t.id));
+    tbody.appendChild(tr);
+  });
+}
+
+function renderAdminUsuarios() {
+  const tbody = document.getElementById("admin-usuarios-tbody");
+  tbody.innerHTML = "";
+  state.users.forEach(u => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${u.id}</td>
+      <td class="admin-nome-cell">${u.nome}</td>
+      <td>${u.cargo || "—"}</td>
+      <td>${u.avatar || "—"}</td>
+      <td>${u.isAdmin ? "Sim" : "Não"}</td>
+      <td>
+        <div class="admin-row-actions">
+          <button class="btn-admin-action" data-action="edit">Editar</button>
+          <button class="btn-admin-action danger" data-action="delete">Excluir</button>
+        </div>
+      </td>`;
+    tr.querySelector('[data-action="edit"]').addEventListener("click", () => openAdminUsuarioModal(u.id));
+    tr.querySelector('[data-action="delete"]').addEventListener("click", () => deleteAdminUsuario(u.id));
+    tbody.appendChild(tr);
+  });
+}
+
+async function deleteAdminTarefa(id) {
+  const t = state.tarefas.find(x => x.id === id);
+  if (!t) return;
+  if (!confirm(`Excluir a tarefa "${t.nome}" permanentemente? Essa ação não pode ser desfeita.`)) return;
+  try {
+    await api.deletarTarefa(id);
+    state.tarefas = state.tarefas.filter(x => x.id !== id);
+    renderAdminTarefas();
+    renderBoard();
+    toast("Tarefa excluída.");
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function deleteAdminUsuario(id) {
+  const u = state.users.find(x => x.id === id);
+  if (!u) return;
+  if (!confirm(`Excluir o usuário "${u.nome}" permanentemente?`)) return;
+  try {
+    await api.deletarUsuario(id);
+    state.users = state.users.filter(x => x.id !== id);
+    renderAdminUsuarios();
+    renderFiltroUsuarios();
+    renderBoard();
+    toast("Usuário excluído.");
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+// ── Gerenciador de Base: editar tarefa ────────────────────
+let adminEditingTarefaId = null;
+
+function openAdminTarefaModal(id) {
+  const t = state.tarefas.find(x => x.id === id);
+  if (!t) return;
+  adminEditingTarefaId = id;
+
+  document.getElementById("admin-tarefa-id-label").textContent = `ID ${t.id}`;
+  document.getElementById("admin-t-nome").value        = t.nome;
+  document.getElementById("admin-t-descricao").value    = t.descricao || "";
+  document.getElementById("admin-t-prazo").value        = t.prazo;
+  document.getElementById("admin-t-data-prazo").value   = t.dataPrazo || "";
+  document.getElementById("admin-t-urgencia").value     = t.urgencia;
+  document.getElementById("admin-t-status").value       = t.status;
+  document.getElementById("admin-t-concluida").value    = t.concluida ? "true" : "false";
+  document.getElementById("admin-t-observacoes").value  = t.observacoes || "";
+  document.getElementById("admin-t-retorno").value      = t.retorno || "";
+  document.getElementById("admin-t-etapas").value       = JSON.stringify(t.etapas || [], null, 2);
+
+  const sel = document.getElementById("admin-t-responsavel");
+  sel.innerHTML = '<option value="">Sem responsável</option>';
+  state.users.forEach(u => {
+    const opt = document.createElement("option");
+    opt.value = u.id;
+    opt.textContent = u.nome;
+    if (t.responsavel === u.id) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  document.getElementById("modal-admin-tarefa-overlay").classList.remove("hidden");
+}
+
+function closeAdminTarefaModal() {
+  document.getElementById("modal-admin-tarefa-overlay").classList.add("hidden");
+  adminEditingTarefaId = null;
+}
+
+document.getElementById("btn-close-admin-tarefa").addEventListener("click", closeAdminTarefaModal);
+document.getElementById("btn-cancel-admin-tarefa").addEventListener("click", closeAdminTarefaModal);
+document.getElementById("modal-admin-tarefa-overlay").addEventListener("click", e => {
+  if (e.target === document.getElementById("modal-admin-tarefa-overlay")) closeAdminTarefaModal();
+});
+
+document.getElementById("btn-save-admin-tarefa").addEventListener("click", async () => {
+  const t = state.tarefas.find(x => x.id === adminEditingTarefaId);
+  if (!t) return;
+
+  let etapas;
+  try {
+    etapas = JSON.parse(document.getElementById("admin-t-etapas").value || "[]");
+  } catch (e) {
+    toast("Etapas: JSON inválido.", true);
+    return;
+  }
+
+  const respVal = document.getElementById("admin-t-responsavel").value;
+  const payload = {
+    nome:        document.getElementById("admin-t-nome").value.trim(),
+    descricao:   document.getElementById("admin-t-descricao").value,
+    etapas,
+    prazo:       document.getElementById("admin-t-prazo").value,
+    dataPrazo:   document.getElementById("admin-t-data-prazo").value || null,
+    urgencia:    document.getElementById("admin-t-urgencia").value,
+    responsavel: respVal ? parseInt(respVal) : null,
+    status:      document.getElementById("admin-t-status").value,
+    observacoes: document.getElementById("admin-t-observacoes").value,
+    retorno:     document.getElementById("admin-t-retorno").value,
+    criadoEm:    t.criadoEm,
+    criadoPor:   t.criadoPor,
+    concluida:   document.getElementById("admin-t-concluida").value === "true",
+    diariaFeitaEm: t.diariaFeitaEm,
+  };
+
+  if (!payload.nome) { toast("Informe o nome da tarefa.", true); return; }
+
+  try {
+    const atualizada = await api.atualizarTarefa(t.id, payload);
+    Object.assign(t, atualizada);
+    closeAdminTarefaModal();
+    renderAdminTarefas();
+    renderBoard();
+    toast("Tarefa atualizada.");
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
+// ── Gerenciador de Base: editar usuário ───────────────────
+let adminEditingUsuarioId = null;
+
+function openAdminUsuarioModal(id) {
+  const u = state.users.find(x => x.id === id);
+  if (!u) return;
+  adminEditingUsuarioId = id;
+
+  document.getElementById("admin-usuario-id-label").textContent = `ID ${u.id}`;
+  document.getElementById("admin-u-nome").value     = u.nome;
+  document.getElementById("admin-u-cargo").value    = u.cargo || "";
+  document.getElementById("admin-u-avatar").value   = u.avatar || "";
+  document.getElementById("admin-u-isadmin").checked = !!u.isAdmin;
+
+  document.getElementById("modal-admin-usuario-overlay").classList.remove("hidden");
+}
+
+function closeAdminUsuarioModal() {
+  document.getElementById("modal-admin-usuario-overlay").classList.add("hidden");
+  adminEditingUsuarioId = null;
+}
+
+document.getElementById("btn-close-admin-usuario").addEventListener("click", closeAdminUsuarioModal);
+document.getElementById("btn-cancel-admin-usuario").addEventListener("click", closeAdminUsuarioModal);
+document.getElementById("modal-admin-usuario-overlay").addEventListener("click", e => {
+  if (e.target === document.getElementById("modal-admin-usuario-overlay")) closeAdminUsuarioModal();
+});
+
+document.getElementById("btn-save-admin-usuario").addEventListener("click", async () => {
+  const u = state.users.find(x => x.id === adminEditingUsuarioId);
+  if (!u) return;
+
+  const nome = document.getElementById("admin-u-nome").value.trim();
+  if (!nome) { toast("Informe o nome do usuário.", true); return; }
+
+  const payload = {
+    nome,
+    cargo:   document.getElementById("admin-u-cargo").value.trim() || "Colaborador",
+    avatar:  document.getElementById("admin-u-avatar").value.trim() || null,
+    isAdmin: document.getElementById("admin-u-isadmin").checked,
+  };
+
+  try {
+    const atualizado = await api.atualizarUsuario(u.id, payload);
+    Object.assign(u, atualizado);
+    closeAdminUsuarioModal();
+    renderAdminUsuarios();
+    renderFiltroUsuarios();
+    renderBoard();
+    if (state.current && state.current.id === u.id) {
+      state.current = u;
+      document.getElementById("sb-user-name").textContent   = u.nome;
+      document.getElementById("sb-user-cargo").textContent  = u.cargo;
+      document.getElementById("sb-user-avatar").textContent = u.avatar;
+      document.getElementById("nav-admin").classList.toggle("hidden", !u.isAdmin);
+    }
+    toast("Usuário atualizado.");
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
 // ── Modal: Nova Tarefa ────────────────────────────────────
 let etapasTemp = [];
 
@@ -414,10 +718,11 @@ document.getElementById("modal-create-overlay").addEventListener("click", e => {
 });
 
 function openCreateModal() {
-  etapasTemp = [];
-  document.getElementById("form-create").reset();
+  // Mantém o que já foi digitado de uma tentativa anterior (não reseta o
+  // form nem etapasTemp aqui) — só é limpo depois de criar com sucesso.
   renderEtapasTemp();
   const sel = document.getElementById("input-responsavel");
+  const prevResponsavel = sel.value;
   sel.innerHTML = '<option value="">Sem responsável</option>';
   state.users.forEach(u => {
     const opt = document.createElement("option");
@@ -425,6 +730,7 @@ function openCreateModal() {
     opt.textContent = u.nome;
     sel.appendChild(opt);
   });
+  sel.value = prevResponsavel;
   document.getElementById("modal-create-overlay").classList.remove("hidden");
 }
 
@@ -495,6 +801,9 @@ document.getElementById("btn-save-create").addEventListener("click", async () =>
     const nova = await api.criarTarefa(payload);
     state.tarefas.push(nova);
     closeCreateModal();
+    document.getElementById("form-create").reset();
+    etapasTemp = [];
+    renderEtapasTemp();
     renderBoard();
     toast("Tarefa criada com sucesso!");
   } catch (err) {
@@ -630,6 +939,27 @@ function labelStatus(s) {
 function labelUrgencia(u) {
   return { alta: "🔴 Alta", media: "🟡 Média", baixa: "🔵 Baixa" }[u] || u;
 }
+
+// ── Modal de confirmação (substitui o confirm() nativo) ───
+const confirmOverlay = document.getElementById("modal-confirm-overlay");
+let confirmResolver = null;
+
+function showConfirm(message, { title = "Confirmar exclusão", confirmLabel = "Excluir" } = {}) {
+  document.getElementById("confirm-title").textContent = title;
+  document.getElementById("confirm-message").textContent = message;
+  document.getElementById("btn-confirm-ok").textContent = confirmLabel;
+  confirmOverlay.classList.remove("hidden");
+  return new Promise(resolve => { confirmResolver = resolve; });
+}
+
+function resolveConfirm(result) {
+  confirmOverlay.classList.add("hidden");
+  if (confirmResolver) { confirmResolver(result); confirmResolver = null; }
+}
+
+document.getElementById("btn-confirm-ok").addEventListener("click", () => resolveConfirm(true));
+document.getElementById("btn-confirm-cancel").addEventListener("click", () => resolveConfirm(false));
+confirmOverlay.addEventListener("click", e => { if (e.target === confirmOverlay) resolveConfirm(false); });
 
 function toast(msg, error = false) {
   const c  = document.getElementById("toast-container");

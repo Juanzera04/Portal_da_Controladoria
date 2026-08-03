@@ -40,6 +40,29 @@
   --transition:  .18s ease;
 }
 
+/* ── Paletas de cor (accent) ──────────────────────────────────
+   Trocadas via [data-accent] no <html>. --green/--green-dim/
+   --green-glow/--green-subtle continuam sendo o nome interno da
+   cor de destaque, mesmo quando o accent escolhido não é verde. */
+:root[data-accent="blue"] {
+  --green:        #3b82f6;
+  --green-dim:    #2563eb;
+  --green-glow:   rgba(59,130,246,.18);
+  --green-subtle: #3b82f614;
+}
+:root[data-accent="purple"] {
+  --green:        #8b5cf6;
+  --green-dim:    #7c3aed;
+  --green-glow:   rgba(139,92,246,.18);
+  --green-subtle: #8b5cf614;
+}
+:root[data-accent="orange"] {
+  --green:        #f97316;
+  --green-dim:    #ea580c;
+  --green-glow:   rgba(249,115,22,.18);
+  --green-subtle: #f9731614;
+}
+
 html, body {
   height: 100%;
   background: var(--bg);
@@ -260,7 +283,7 @@ textarea { resize: vertical; min-height: 70px; }
   background: var(--green);
   color: #000;
 }
-.btn-primary:hover { background: #1db050; }
+.btn-primary:hover { background: var(--green-dim); }
 .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
 
 .btn-ghost {
@@ -276,6 +299,11 @@ textarea { resize: vertical; min-height: 70px; }
   border: 1px solid rgba(239,68,68,.3);
 }
 .btn-danger:hover { background: rgba(239,68,68,.08); }
+
+/* ── Modal de confirmação ────────────────────────────────── */
+#modal-confirm { max-width: 400px; }
+#modal-confirm .modal-header { border-bottom: none; padding-bottom: 4px; }
+#modal-confirm .modal-header-info p { color: var(--muted); font-size: 13px; margin-top: 6px; line-height: 1.5; }
 
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 .btn-icon { padding: 7px; border-radius: var(--radius-sm); }
@@ -371,6 +399,24 @@ textarea { resize: vertical; min-height: 70px; }
   border-color: rgba(34,197,94,.2);
 }
 .nav-item svg { flex-shrink: 0; }
+
+.theme-swatches {
+  display: flex;
+  gap: 8px;
+  padding: 0 18px;
+  margin-bottom: 6px;
+}
+.theme-swatch {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.15);
+  transition: var(--transition);
+}
+.theme-swatch:hover { transform: scale(1.1); }
+.theme-swatch.selected { border-color: var(--white); }
 
 .sidebar-footer {
   margin-top: auto;
@@ -530,6 +576,22 @@ textarea { resize: vertical; min-height: 70px; }
   margin-bottom: 8px;
 }
 .diaria-top .card-title { margin-bottom: 0; flex: 1; }
+
+.diaria-delete {
+  background: transparent;
+  border: none;
+  color: var(--muted2);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: var(--transition);
+  opacity: 0;
+}
+.task-card-diaria:hover .diaria-delete { opacity: 1; }
+.diaria-delete:hover { color: var(--red); background: rgba(239,68,68,.1); }
 
 .diaria-checkbox {
   width: 20px; height: 20px;
@@ -744,18 +806,56 @@ textarea { resize: vertical; min-height: 70px; }
 .etapa-add-row input { flex: 1; }
 
 /* ── Detail Modal ────────────────────────────────────────── */
-#modal-detail { max-width: 600px; }
+/* Layout em 2 colunas para caber na tela sem precisar rolar. */
+#modal-detail {
+  max-width: 940px;
+  width: 95vw;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#modal-detail .modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 24px;
+  overflow: hidden;
+  display: flex;
+}
 
-.detail-section { margin-bottom: 20px; }
+.detail-grid {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 24px;
+}
+.detail-col {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.detail-section { flex-shrink: 0; }
+.detail-section-grow {
+  flex: 1 1 auto;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+}
 .detail-section-title {
   font-size: 11px;
   font-weight: 700;
   color: var(--muted);
   letter-spacing: .5px;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .detail-desc {
   font-size: 13px;
@@ -764,15 +864,16 @@ textarea { resize: vertical; min-height: 70px; }
 }
 
 /* checklist */
-.checklist { display: flex; flex-direction: column; gap: 7px; }
+.checklist { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; }
 .check-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 9px 12px;
+  padding: 7px 12px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition);
+  flex-shrink: 0;
 }
 .check-item:hover { border-color: var(--border2); }
 .check-item.done { opacity: .6; }
@@ -796,11 +897,17 @@ textarea { resize: vertical; min-height: 70px; }
 /* detail meta row */
 .detail-meta-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 .detail-meta-item .label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
 .detail-meta-item .value { font-size: 13px; font-weight: 500; }
+
+#modal-detail .detail-section-grow textarea {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+}
 
 /* ── Concluded Screen ────────────────────────────────────── */
 #concluded-screen {
@@ -835,6 +942,98 @@ textarea { resize: vertical; min-height: 70px; }
   gap: 12px;
   align-content: start;
 }
+
+/* ── Gerenciador de Base ─────────────────────────────────── */
+#admin-screen {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+#admin-screen.visible { display: flex; }
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.admin-topbar h2 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+.admin-tabs { display: flex; gap: 6px; margin-left: auto; }
+.admin-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: var(--transition);
+}
+.admin-tab:hover { color: var(--white); border-color: var(--border2); }
+.admin-tab.active { background: var(--green-subtle); color: var(--green); border-color: rgba(34,197,94,.2); }
+
+.admin-body {
+  flex: 1;
+  overflow: auto;
+  padding: 20px 28px;
+}
+
+.admin-table-wrap { overflow-x: auto; }
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.admin-table th, .admin-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+.admin-table th {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+}
+.admin-table tbody tr:hover { background: var(--surface2); }
+.admin-table td.admin-nome-cell { white-space: normal; max-width: 320px; }
+
+.admin-row-actions { display: flex; gap: 6px; }
+.btn-admin-action {
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: var(--transition);
+}
+.btn-admin-action:hover { color: var(--white); border-color: var(--border2); background: var(--surface3); }
+.btn-admin-action.danger:hover { color: var(--red); border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.08); }
+
+.checkbox-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--white);
+  cursor: pointer;
+}
+.checkbox-row input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--green); cursor: pointer; }
 
 /* ══════════════════════════════════════════════════════════════
    ANIMATIONS

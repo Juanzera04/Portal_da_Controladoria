@@ -75,12 +75,29 @@
 
     <div class="nav-section-label">Menu</div>
 
-    <div class="nav-item active">
+    <div class="nav-item active" id="nav-board">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
         <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
       </svg>
       Tarefas da Controladoria
+    </div>
+
+    <div class="nav-item hidden" id="nav-admin">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <ellipse cx="12" cy="5" rx="8" ry="3"/>
+        <path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/>
+        <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>
+      </svg>
+      Gerenciador de Base
+    </div>
+
+    <div class="nav-section-label" style="margin-top:18px;">Tema</div>
+    <div class="theme-swatches" id="theme-swatches">
+      <button class="theme-swatch" data-accent="green"  style="background:#22c55e" title="Verde"></button>
+      <button class="theme-swatch" data-accent="blue"   style="background:#3b82f6" title="Azul"></button>
+      <button class="theme-swatch" data-accent="purple" style="background:#8b5cf6" title="Roxo"></button>
+      <button class="theme-swatch" data-accent="orange" style="background:#f97316" title="Laranja"></button>
     </div>
 
     <div class="sidebar-footer">
@@ -145,6 +162,46 @@
       </div>
       <div class="concluded-list" id="concluded-list">
         <!-- renderizado via JS -->
+      </div>
+    </div>
+
+    <!-- Gerenciador de Base -->
+    <div id="admin-screen">
+      <div class="admin-topbar">
+        <button class="btn btn-ghost btn-sm" id="btn-back-board-admin">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Voltar
+        </button>
+        <h2>Gerenciador de Base</h2>
+        <div class="admin-tabs">
+          <button class="admin-tab active" data-tab="tarefas" id="admin-tab-tarefas">Tarefas</button>
+          <button class="admin-tab" data-tab="usuarios" id="admin-tab-usuarios">Usuários</button>
+        </div>
+      </div>
+
+      <div class="admin-body">
+        <div class="admin-table-wrap" id="admin-tarefas-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Nome</th><th>Prazo</th><th>Status</th>
+                <th>Urgência</th><th>Responsável</th><th>Concluída</th><th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="admin-tarefas-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="admin-table-wrap hidden" id="admin-usuarios-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr><th>ID</th><th>Nome</th><th>Cargo</th><th>Avatar</th><th>Admin</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="admin-usuarios-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -263,69 +320,70 @@
     </div>
 
     <div class="modal-body">
+      <div class="detail-grid">
 
-      <!-- Descrição -->
-      <div class="detail-section">
-        <div class="detail-section-title">Descrição</div>
-        <p class="detail-desc" id="detail-desc">—</p>
-      </div>
-
-      <!-- Etapas / Checklist -->
-      <div class="detail-section">
-        <div class="detail-section-title">Etapas</div>
-        <div class="checklist" id="detail-checklist"></div>
-      </div>
-
-      <!-- Meta -->
-      <div class="detail-section">
-        <div class="detail-section-title">Informações</div>
-        <div class="detail-meta-grid">
-          <div class="detail-meta-item">
-            <div class="label">Status</div>
-            <div class="value" id="detail-status">—</div>
+        <!-- Coluna esquerda: descrição + etapas -->
+        <div class="detail-col detail-col-left">
+          <div class="detail-section">
+            <div class="detail-section-title">Descrição</div>
+            <p class="detail-desc" id="detail-desc">—</p>
           </div>
-          <div class="detail-meta-item">
-            <div class="label">Urgência</div>
-            <div class="value" id="detail-urgencia">—</div>
-          </div>
-          <div class="detail-meta-item">
-            <div class="label">Data do Prazo</div>
-            <div class="value" id="detail-prazo">—</div>
+
+          <div class="detail-section detail-section-grow">
+            <div class="detail-section-title">Etapas</div>
+            <div class="checklist" id="detail-checklist"></div>
           </div>
         </div>
-      </div>
 
-      <!-- Alterar status & responsável -->
-      <div class="detail-section">
-        <div class="detail-section-title">Atualizar</div>
-        <div class="field-row">
-          <div class="form-group">
-            <label class="form-label">Status</label>
-            <select id="detail-status-sel">
-              <option value="pendente">Pendente</option>
-              <option value="em andamento">Em andamento</option>
-              <option value="concluida">Concluída</option>
-            </select>
+        <!-- Coluna direita: meta + atualização + textos -->
+        <div class="detail-col detail-col-right">
+          <div class="detail-section">
+            <div class="detail-section-title">Informações</div>
+            <div class="detail-meta-grid">
+              <div class="detail-meta-item">
+                <div class="label">Status</div>
+                <div class="value" id="detail-status">—</div>
+              </div>
+              <div class="detail-meta-item">
+                <div class="label">Urgência</div>
+                <div class="value" id="detail-urgencia">—</div>
+              </div>
+              <div class="detail-meta-item">
+                <div class="label">Data do Prazo</div>
+                <div class="value" id="detail-prazo">—</div>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Responsável</label>
-            <select id="detail-responsavel"></select>
+
+          <div class="detail-section">
+            <div class="field-row">
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select id="detail-status-sel">
+                  <option value="pendente">Pendente</option>
+                  <option value="em andamento">Em andamento</option>
+                  <option value="concluida">Concluída</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Responsável</label>
+                <select id="detail-responsavel"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-section detail-section-grow">
+            <div class="detail-section-title">Observações</div>
+            <textarea id="detail-obs" placeholder="Adicione observações sobre o andamento..."></textarea>
+          </div>
+
+          <div class="detail-section detail-section-grow">
+            <div class="detail-section-title">Retorno / Resultado</div>
+            <textarea id="detail-retorno" placeholder="Descreva o resultado ou retorno antes de concluir..."></textarea>
           </div>
         </div>
-      </div>
 
-      <!-- Observações -->
-      <div class="detail-section">
-        <div class="detail-section-title">Observações</div>
-        <textarea id="detail-obs" placeholder="Adicione observações sobre o andamento..."></textarea>
       </div>
-
-      <!-- Retorno / Conclusão -->
-      <div class="detail-section">
-        <div class="detail-section-title">Retorno / Resultado</div>
-        <textarea id="detail-retorno" placeholder="Descreva o resultado ou retorno antes de concluir..."></textarea>
-      </div>
-
     </div>
 
     <div class="modal-footer">
@@ -335,12 +393,168 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     MODAL: Editar Tarefa (Gerenciador de Base)
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-admin-tarefa-overlay">
+  <div class="modal" id="modal-admin-tarefa">
+    <div class="modal-header">
+      <div class="modal-header-info">
+        <h2>Editar Tarefa</h2>
+        <p id="admin-tarefa-id-label">—</p>
+      </div>
+      <button class="btn-close" id="btn-close-admin-tarefa">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input type="text" id="admin-t-nome" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea id="admin-t-descricao"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="form-group">
+          <label class="form-label">Tipo de Prazo</label>
+          <select id="admin-t-prazo">
+            <option value="diaria">Diária</option>
+            <option value="hoje">Para hoje</option>
+            <option value="semana">Para a semana</option>
+            <option value="mes">Para o mês</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data do Prazo</label>
+          <input type="date" id="admin-t-data-prazo" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="form-group">
+          <label class="form-label">Urgência</label>
+          <select id="admin-t-urgencia">
+            <option value="media">Média</option>
+            <option value="alta">Alta</option>
+            <option value="baixa">Baixa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="admin-t-status">
+            <option value="pendente">Pendente</option>
+            <option value="em andamento">Em andamento</option>
+            <option value="concluida">Concluída</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="form-group">
+          <label class="form-label">Responsável</label>
+          <select id="admin-t-responsavel"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Concluída</label>
+          <select id="admin-t-concluida">
+            <option value="false">Não</option>
+            <option value="true">Sim</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observações</label>
+        <textarea id="admin-t-observacoes"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Retorno</label>
+        <textarea id="admin-t-retorno"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Etapas (JSON)</label>
+        <textarea id="admin-t-etapas" style="font-family:monospace;font-size:12px;"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancel-admin-tarefa">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-admin-tarefa">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL: Editar Usuário (Gerenciador de Base)
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-admin-usuario-overlay">
+  <div class="modal" id="modal-admin-usuario" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-header-info">
+        <h2>Editar Usuário</h2>
+        <p id="admin-usuario-id-label">—</p>
+      </div>
+      <button class="btn-close" id="btn-close-admin-usuario">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input type="text" id="admin-u-nome" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cargo</label>
+        <input type="text" id="admin-u-cargo" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Avatar (iniciais)</label>
+        <input type="text" id="admin-u-avatar" maxlength="3" />
+      </div>
+      <div class="form-group">
+        <label class="checkbox-row">
+          <input type="checkbox" id="admin-u-isadmin" />
+          Administrador (acesso ao Gerenciador de Base)
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancel-admin-usuario">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-admin-usuario">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL: Confirmação genérica
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-confirm-overlay">
+  <div class="modal" id="modal-confirm">
+    <div class="modal-header">
+      <div class="modal-header-info">
+        <h2 id="confirm-title">Confirmar ação</h2>
+        <p id="confirm-message">Tem certeza?</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-confirm-cancel">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirm-ok">Excluir</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div id="toast-container"></div>
 
 <!-- Loading overlay -->
 <div id="loading-overlay" class="modal-overlay" style="z-index:200;flex-direction:column;gap:12px;">
-  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" style="animation:spin 1s linear infinite">
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="animation:spin 1s linear infinite">
     <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
   </svg>
   <span style="color:var(--muted);font-size:13px;">Conectando ao servidor...</span>

@@ -49,9 +49,12 @@ def init_db():
                     id        SERIAL PRIMARY KEY,
                     nome      TEXT NOT NULL,
                     cargo     TEXT DEFAULT 'Colaborador',
-                    avatar    TEXT
+                    avatar    TEXT,
+                    is_admin  BOOLEAN DEFAULT FALSE
                 )
             """)
+            cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE")
+            conn.commit()
 
             # Tabela de tarefas
             cur.execute("""
@@ -142,10 +145,11 @@ def row_to_tarefa(row: dict) -> dict:
 
 def row_to_usuario(row: dict) -> dict:
     return {
-        "id":     row["id"],
-        "nome":   row["nome"],
-        "cargo":  row["cargo"],
-        "avatar": row["avatar"],
+        "id":       row["id"],
+        "nome":     row["nome"],
+        "cargo":    row["cargo"],
+        "avatar":   row["avatar"],
+        "isAdmin":  row.get("is_admin", False),
     }
 
 # ── Models ─────────────────────────────────────────────────
@@ -176,6 +180,7 @@ class Usuario(BaseModel):
     nome: str
     cargo: Optional[str] = "Colaborador"
     avatar: Optional[str] = None
+    isAdmin: Optional[bool] = False
 
 # ── Startup ────────────────────────────────────────────────
 @app.on_event("startup")
@@ -326,6 +331,38 @@ def criar_usuario(usuario: Usuario):
             )
             conn.commit()
             return row_to_usuario(cur.fetchone())
+
+
+@app.put("/api/usuarios/{usuario_id}")
+def atualizar_usuario(usuario_id: int, usuario: Usuario):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE usuarios SET
+                    nome=%(nome)s, cargo=%(cargo)s, avatar=%(avatar)s, is_admin=%(is_admin)s
+                WHERE id=%(id)s
+                RETURNING *
+            """, {
+                "id": usuario_id, "nome": usuario.nome,
+                "cargo": usuario.cargo, "avatar": usuario.avatar,
+                "is_admin": usuario.isAdmin,
+            })
+            conn.commit()
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            return row_to_usuario(row)
+
+
+@app.delete("/api/usuarios/{usuario_id}", status_code=204)
+def deletar_usuario(usuario_id: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM usuarios WHERE id = %s RETURNING id", (usuario_id,))
+            conn.commit()
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    return None
 
 # ══════════════════════════════════════════════════════════
 # SERVE O FRONTEND
