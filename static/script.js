@@ -855,7 +855,38 @@ function openDetail(id) {
 
   document.getElementById("detail-status").textContent   = labelStatus(t.status);
   document.getElementById("detail-urgencia").textContent = labelUrgencia(t.urgencia);
-  document.getElementById("detail-prazo").textContent    = t.dataPrazo ? formatDate(t.dataPrazo) : "—";
+  document.getElementById("detail-prazo").textContent    = labelPrazo(t.prazo, t.dataPrazo);
+
+  const selPrazo = document.getElementById("detail-prazo-sel");
+  selPrazo.value = t.prazo;
+  selPrazo.onchange = async () => {
+    const prazoAnterior = t.prazo;
+    t.prazo = selPrazo.value;
+    try {
+      await api.atualizarTarefa(t.id, t);
+      renderBoard();
+      document.getElementById("detail-prazo").textContent = labelPrazo(t.prazo, t.dataPrazo);
+    } catch (err) {
+      t.prazo = prazoAnterior;
+      selPrazo.value = prazoAnterior;
+      toast(err.message, true);
+    }
+  };
+
+  const inputDataPrazo = document.getElementById("detail-data-prazo-sel");
+  inputDataPrazo.value = t.dataPrazo || "";
+  inputDataPrazo.onchange = async () => {
+    const dataAnterior = t.dataPrazo;
+    t.dataPrazo = inputDataPrazo.value || null;
+    try {
+      await api.atualizarTarefa(t.id, t);
+      document.getElementById("detail-prazo").textContent = labelPrazo(t.prazo, t.dataPrazo);
+    } catch (err) {
+      t.dataPrazo = dataAnterior;
+      inputDataPrazo.value = dataAnterior || "";
+      toast(err.message, true);
+    }
+  };
 
   const sel = document.getElementById("detail-responsavel");
   sel.innerHTML = '<option value="">Sem responsável</option>';
@@ -875,12 +906,23 @@ function openDetail(id) {
   const selStatus = document.getElementById("detail-status-sel");
   selStatus.value = t.status;
   selStatus.onchange = async () => {
-    t.status = selStatus.value;
+    const statusAnterior    = t.status;
+    const concluidaAnterior = t.concluida;
+    t.status    = selStatus.value;
+    t.concluida = selStatus.value === "concluida";
     try {
       await api.atualizarTarefa(t.id, t);
       renderBoard();
       document.getElementById("detail-status").textContent = labelStatus(t.status);
-    } catch (err) { toast(err.message, true); }
+      if (document.getElementById("concluded-screen").classList.contains("visible")) renderConcluded();
+      if (t.concluida && !concluidaAnterior) toast("Tarefa concluída!");
+      else if (!t.concluida && concluidaAnterior) toast("Tarefa reaberta.");
+    } catch (err) {
+      t.status    = statusAnterior;
+      t.concluida = concluidaAnterior;
+      selStatus.value = statusAnterior;
+      toast(err.message, true);
+    }
   };
 
   document.getElementById("detail-obs").value     = t.observacoes || "";
@@ -897,26 +939,6 @@ function openDetail(id) {
     try { await api.patchTarefa(t.id, { retorno: t.retorno }); }
     catch (err) { toast(err.message, true); }
   }, 600);
-
-  const btnConcluir = document.getElementById("btn-concluir");
-  btnConcluir.textContent = t.concluida ? "Reabrir Tarefa" : "Concluir Tarefa";
-  btnConcluir.className   = t.concluida ? "btn btn-ghost"  : "btn btn-primary";
-
-  btnConcluir.onclick = async () => {
-    t.concluida = !t.concluida;
-    t.status    = t.concluida ? "concluida" : "pendente";
-    try {
-      await api.atualizarTarefa(t.id, t);
-      closeDetail();
-      renderBoard();
-      if (document.getElementById("concluded-screen").classList.contains("visible")) renderConcluded();
-      toast(t.concluida ? "Tarefa concluída!" : "Tarefa reaberta.");
-    } catch (err) {
-      t.concluida = !t.concluida;
-      t.status    = t.concluida ? "concluida" : "pendente";
-      toast(err.message, true);
-    }
-  };
 
   modalDetail.classList.remove("hidden");
 }
@@ -938,6 +960,11 @@ function labelStatus(s) {
 
 function labelUrgencia(u) {
   return { alta: "🔴 Alta", media: "🟡 Média", baixa: "🔵 Baixa" }[u] || u;
+}
+
+function labelPrazo(prazo, dataPrazo) {
+  const tipo = { diaria: "Diária", hoje: "Para hoje", semana: "Para a semana", mes: "Para o mês" }[prazo] || prazo || "—";
+  return dataPrazo ? `${tipo} · ${formatDate(dataPrazo)}` : tipo;
 }
 
 // ── Modal de confirmação (substitui o confirm() nativo) ───

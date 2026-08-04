@@ -349,13 +349,28 @@
                 <div class="value" id="detail-urgencia">—</div>
               </div>
               <div class="detail-meta-item">
-                <div class="label">Data do Prazo</div>
+                <div class="label">Prazo</div>
                 <div class="value" id="detail-prazo">—</div>
               </div>
             </div>
           </div>
 
           <div class="detail-section">
+            <div class="field-row">
+              <div class="form-group">
+                <label class="form-label">Tipo de Prazo</label>
+                <select id="detail-prazo-sel">
+                  <option value="diaria">Diária</option>
+                  <option value="hoje">Para hoje</option>
+                  <option value="semana">Para a semana</option>
+                  <option value="mes">Para o mês</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data do Prazo</label>
+                <input type="date" id="detail-data-prazo-sel" />
+              </div>
+            </div>
             <div class="field-row">
               <div class="form-group">
                 <label class="form-label">Status</label>
@@ -387,8 +402,7 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="document.getElementById('modal-detail-overlay').classList.add('hidden')">Fechar</button>
-      <button class="btn btn-primary" id="btn-concluir">Concluir Tarefa</button>
+      <button class="btn btn-primary" onclick="document.getElementById('modal-detail-overlay').classList.add('hidden')">Fechar</button>
     </div>
   </div>
 </div>
