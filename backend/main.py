@@ -78,6 +78,10 @@ def init_db():
             """)
             conn.commit()
 
+            cur.execute("ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS concluido_em TEXT")
+            cur.execute("ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS concluido_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL")
+            conn.commit()
+
             # Importa usuários do JSON só se a tabela estiver vazia
             cur.execute("SELECT COUNT(*) as c FROM usuarios")
             if cur.fetchone()["c"] == 0:
@@ -141,6 +145,8 @@ def row_to_tarefa(row: dict) -> dict:
         "criadoPor":      row["criado_por"],
         "concluida":      row["concluida"],
         "diariaFeitaEm":  row["diaria_feita_em"],
+        "concluidoEm":    row["concluido_em"],
+        "concluidoPor":   row["concluido_por"],
     }
 
 def row_to_usuario(row: dict) -> dict:
@@ -174,6 +180,8 @@ class Tarefa(BaseModel):
     criadoPor: Optional[int] = None
     concluida: Optional[bool] = False
     diariaFeitaEm: Optional[str] = None
+    concluidoEm: Optional[str] = None
+    concluidoPor: Optional[int] = None
 
 class Usuario(BaseModel):
     id: Optional[int] = None
@@ -239,7 +247,8 @@ def atualizar_tarefa(tarefa_id: int, tarefa: Tarefa):
                     prazo=%(prazo)s, data_prazo=%(data_prazo)s, urgencia=%(urgencia)s,
                     responsavel=%(responsavel)s, status=%(status)s,
                     observacoes=%(observacoes)s, retorno=%(retorno)s,
-                    concluida=%(concluida)s, diaria_feita_em=%(diaria_feita_em)s
+                    concluida=%(concluida)s, diaria_feita_em=%(diaria_feita_em)s,
+                    concluido_em=%(concluido_em)s, concluido_por=%(concluido_por)s
                 WHERE id=%(id)s
                 RETURNING *
             """, {
@@ -250,6 +259,7 @@ def atualizar_tarefa(tarefa_id: int, tarefa: Tarefa):
                 "status": tarefa.status, "observacoes": tarefa.observacoes,
                 "retorno": tarefa.retorno, "concluida": tarefa.concluida,
                 "diaria_feita_em": tarefa.diariaFeitaEm,
+                "concluido_em": tarefa.concluidoEm, "concluido_por": tarefa.concluidoPor,
             })
             conn.commit()
             row = cur.fetchone()
@@ -266,6 +276,7 @@ def patch_tarefa(tarefa_id: int, campos: dict):
         "responsavel": "responsavel", "status": "status",
         "observacoes": "observacoes", "retorno": "retorno",
         "concluida": "concluida", "diariaFeitaEm": "diaria_feita_em",
+        "concluidoEm": "concluido_em", "concluidoPor": "concluido_por",
     }
     sets, values = [], []
     for key, val in campos.items():

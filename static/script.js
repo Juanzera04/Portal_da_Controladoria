@@ -22,6 +22,8 @@ let state = {
   tarefas:      [],
   current:      null,
   filtroUsuario: null,
+  filtroConcluidoUsuario:  null,
+  filtroConcluidoPeriodo:  "todos",
 };
 
 // ── API helpers ───────────────────────────────────────────
@@ -439,6 +441,10 @@ function buildCard(t) {
   const statusClass = { pendente: "badge-pendente", "em andamento": "badge-andamento", concluida: "badge-concluida" }[t.status] || "badge-pendente";
   const statusLabel = { pendente: "Pendente", "em andamento": "Em andamento", concluida: "Concluída" }[t.status] || t.status;
 
+  const concluidor = t.concluida
+    ? state.users.find(u => u.id === (t.concluidoPor || t.responsavel))
+    : null;
+
   el.innerHTML = `
     <div class="card-title">${t.nome}</div>
     <div class="card-meta">
@@ -454,7 +460,10 @@ function buildCard(t) {
     <div class="card-footer">
       <span class="card-date">${resp ? "" : "Sem resp."}</span>
       ${resp ? `<div class="card-resp"><div class="avatar sm">${resp.avatar}</div><span>${resp.nome}</span></div>` : ""}
-    </div>`;
+    </div>
+    ${t.concluida && t.concluidoEm ? `
+      <div class="card-concluido-info">Concluída em ${formatDate(t.concluidoEm)}${concluidor ? ` por ${concluidor.nome}` : ""}</div>
+    ` : ""}`;
 
   el.addEventListener("click", () => openDetail(t.id));
   return el;
@@ -472,15 +481,103 @@ document.getElementById("btn-back-board").addEventListener("click", () => {
   document.getElementById("concluded-screen").classList.remove("visible");
 });
 
+function dentroDoPeriodo(t, periodo) {
+  if (!t.concluidoEm) return false;
+  if (periodo === "hoje") return t.concluidoEm.slice(0, 10) === todayStr();
+  const dias = periodo === "semana" ? 7 : 30;
+  return new Date(t.concluidoEm).getTime() >= Date.now() - dias * 86400000;
+}
+
 function renderConcluded() {
+  renderFiltrosConcluidas();
+
   const list = document.getElementById("concluded-list");
   list.innerHTML = "";
-  const done = state.tarefas.filter(t => t.concluida);
+
+  let done = state.tarefas.filter(t => t.concluida);
+  const temFiltro = state.filtroConcluidoUsuario !== null || state.filtroConcluidoPeriodo !== "todos";
+
+  if (state.filtroConcluidoUsuario !== null) {
+    done = done.filter(t => (t.concluidoPor || t.responsavel) === state.filtroConcluidoUsuario);
+  }
+  if (state.filtroConcluidoPeriodo !== "todos") {
+    done = done.filter(t => dentroDoPeriodo(t, state.filtroConcluidoPeriodo));
+  }
+
+  // Mais recentes primeiro; tarefas concluídas antes desse campo existir
+  // (sem concluidoEm) ficam no final, sem quebrar a ordenação das outras.
+  done = [...done].sort((a, b) => {
+    if (!a.concluidoEm && !b.concluidoEm) return 0;
+    if (!a.concluidoEm) return 1;
+    if (!b.concluidoEm) return -1;
+    return new Date(b.concluidoEm) - new Date(a.concluidoEm);
+  });
+
   if (done.length === 0) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px;">Nenhuma tarefa concluída ainda.</div>`;
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px;">Nenhuma tarefa concluída${temFiltro ? " com esse filtro" : " ainda"}.</div>`;
     return;
   }
   done.forEach(t => list.appendChild(buildCard(t)));
+}
+
+// ── Filtros da tela de Concluídas ──────────────────────────
+function renderFiltrosConcluidas() {
+  const existing = document.getElementById("filtro-concluidas-bar");
+  if (existing) existing.remove();
+
+  const bar = document.createElement("div");
+  bar.id = "filtro-concluidas-bar";
+  bar.style.cssText = [
+    "display:flex",
+    "align-items:center",
+    "gap:6px",
+    "flex-wrap:wrap",
+    "padding:8px 24px",
+    "border-bottom:1px solid var(--border)",
+    "background:var(--surface)",
+  ].join(";");
+
+  const addLabel = txt => {
+    const l = document.createElement("span");
+    l.textContent = txt;
+    l.style.cssText = "font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:4px;";
+    bar.appendChild(l);
+  };
+  const addBtn = (html, ativo, onClick) => {
+    const btn = document.createElement("button");
+    btn.innerHTML = html;
+    btn.style.cssText = buildFiltroStyle(ativo);
+    btn.onclick = onClick;
+    bar.appendChild(btn);
+  };
+
+  addLabel("Concluído por:");
+  addBtn("Todos", state.filtroConcluidoUsuario === null, () => {
+    state.filtroConcluidoUsuario = null;
+    renderConcluded();
+  });
+  state.users.forEach(u => {
+    addBtn(`${u.avatar} ${u.nome}`, state.filtroConcluidoUsuario === u.id, () => {
+      state.filtroConcluidoUsuario = u.id;
+      renderConcluded();
+    });
+  });
+
+  const sep = document.createElement("span");
+  sep.style.cssText = "width:1px;align-self:stretch;background:var(--border);margin:0 4px;";
+  bar.appendChild(sep);
+
+  addLabel("Concluído recentemente:");
+  [["todos", "Todos"], ["hoje", "Hoje"], ["semana", "Últimos 7 dias"], ["mes", "Últimos 30 dias"]]
+    .forEach(([key, label]) => {
+      addBtn(label, state.filtroConcluidoPeriodo === key, () => {
+        state.filtroConcluidoPeriodo = key;
+        renderConcluded();
+      });
+    });
+
+  const topbar = document.querySelector("#concluded-screen .concluded-topbar");
+  topbar.insertAdjacentElement("afterend", bar);
 }
 
 // ── View: navegação entre Board / Gerenciador de Base ─────
@@ -945,10 +1042,16 @@ function openDetail(id) {
   const selStatus = document.getElementById("detail-status-sel");
   selStatus.value = t.status;
   selStatus.onchange = async () => {
-    const statusAnterior    = t.status;
-    const concluidaAnterior = t.concluida;
+    const statusAnterior      = t.status;
+    const concluidaAnterior   = t.concluida;
+    const concluidoEmAnterior = t.concluidoEm;
+    const concluidoPorAnterior = t.concluidoPor;
     t.status    = selStatus.value;
     t.concluida = selStatus.value === "concluida";
+    if (t.concluida && !concluidaAnterior) {
+      t.concluidoEm  = new Date().toISOString();
+      t.concluidoPor = state.current?.id ?? null;
+    }
     try {
       await api.atualizarTarefa(t.id, t);
       renderBoard();
@@ -957,8 +1060,10 @@ function openDetail(id) {
       if (t.concluida && !concluidaAnterior) toast("Tarefa concluída!");
       else if (!t.concluida && concluidaAnterior) toast("Tarefa reaberta.");
     } catch (err) {
-      t.status    = statusAnterior;
-      t.concluida = concluidaAnterior;
+      t.status       = statusAnterior;
+      t.concluida    = concluidaAnterior;
+      t.concluidoEm  = concluidoEmAnterior;
+      t.concluidoPor = concluidoPorAnterior;
       selStatus.value = statusAnterior;
       toast(err.message, true);
     }
