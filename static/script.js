@@ -302,6 +302,31 @@ function renderBoard() {
     board.appendChild(col_el);
 
     const body = col_el.querySelector(`#col-${col.key}`);
+
+    body.addEventListener("dragover", e => {
+      e.preventDefault();
+      body.classList.add("drag-over");
+    });
+    body.addEventListener("dragleave", () => body.classList.remove("drag-over"));
+    body.addEventListener("drop", async e => {
+      e.preventDefault();
+      body.classList.remove("drag-over");
+      const id = Number(e.dataTransfer.getData("text/plain"));
+      const t  = state.tarefas.find(x => x.id === id);
+      if (!t || t.prazo === col.key) return;
+
+      const prazoAnterior = t.prazo;
+      t.prazo = col.key;
+      renderBoard();
+      try {
+        await api.atualizarTarefa(t.id, t);
+      } catch (err) {
+        t.prazo = prazoAnterior;
+        renderBoard();
+        toast(err.message, true);
+      }
+    });
+
     if (tasks.length === 0) {
       body.innerHTML = `
         <div class="column-empty">
@@ -327,6 +352,13 @@ function buildDiariaCard(t) {
   const feita = isDiariaFeitaHoje(t);
   const el = document.createElement("div");
   el.className = `task-card task-card-diaria ${feita ? "diaria-feita" : ""}`;
+  el.draggable = true;
+  el.addEventListener("dragstart", e => {
+    e.dataTransfer.setData("text/plain", String(t.id));
+    e.dataTransfer.effectAllowed = "move";
+    el.classList.add("dragging");
+  });
+  el.addEventListener("dragend", () => el.classList.remove("dragging"));
 
   const resp     = t.responsavel ? state.users.find(u => u.id === t.responsavel) : null;
   const urgClass = { alta: "urg-alta", media: "urg-media", baixa: "urg-baixa" }[t.urgencia] || "urg-media";
@@ -390,6 +422,13 @@ function buildDiariaCard(t) {
 function buildCard(t) {
   const el = document.createElement("div");
   el.className = "task-card";
+  el.draggable = true;
+  el.addEventListener("dragstart", e => {
+    e.dataTransfer.setData("text/plain", String(t.id));
+    e.dataTransfer.effectAllowed = "move";
+    el.classList.add("dragging");
+  });
+  el.addEventListener("dragend", () => el.classList.remove("dragging"));
 
   const etapasDone  = t.etapas.filter(e => e.concluida).length;
   const etapasTotal = t.etapas.length;

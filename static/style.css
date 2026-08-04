@@ -531,6 +531,13 @@ textarea { resize: vertical; min-height: 70px; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border: 2px dashed transparent;
+  border-radius: var(--radius);
+  transition: var(--transition);
+}
+.column-body.drag-over {
+  border-color: var(--green);
+  background: rgba(255,255,255,.02);
 }
 
 /* ── Task Card ───────────────────────────────────────────── */
@@ -539,7 +546,7 @@ textarea { resize: vertical; min-height: 70px; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 12px 13px;
-  cursor: pointer;
+  cursor: grab;
   transition: var(--transition);
   animation: fadeUp .22s ease both;
 }
@@ -548,6 +555,10 @@ textarea { resize: vertical; min-height: 70px; }
   background: var(--surface3);
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+.task-card.dragging {
+  opacity: .4;
+  cursor: grabbing;
 }
 
 /* ── Card Diária ─────────────────────────────────────────── */
