@@ -198,71 +198,50 @@ function renderFiltroUsuarios() {
 
   const bar = document.createElement("div");
   bar.id = "filtro-usuario-bar";
-  bar.style.cssText = [
-    "display:flex",
-    "align-items:center",
-    "gap:6px",
-    "flex-wrap:wrap",
-    "padding:8px 24px",
-    "border-bottom:1px solid var(--border)",
-    "background:var(--surface)",
-  ].join(";");
+  bar.className = "filtro-bar";
 
-  // Label
+  const group = document.createElement("div");
+  group.className = "filtro-group";
+
   const label = document.createElement("span");
+  label.className = "filtro-group-label";
   label.textContent = "Filtrar:";
-  label.style.cssText = "font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:4px;";
-  bar.appendChild(label);
+  group.appendChild(label);
 
   // Botão Todos
   const btnTodos = document.createElement("button");
+  btnTodos.className = "filtro-btn" + (state.filtroUsuario === null ? " active" : "");
   btnTodos.textContent = "Todos";
-  btnTodos.style.cssText = buildFiltroStyle(state.filtroUsuario === null);
   btnTodos.onclick = () => {
     state.filtroUsuario = null;
     renderFiltroUsuarios();
     renderBoard();
   };
-  bar.appendChild(btnTodos);
+  group.appendChild(btnTodos);
 
   // Botão por usuário
   state.users.forEach(u => {
     const btn = document.createElement("button");
+    btn.className = "filtro-btn" + (state.filtroUsuario === u.id ? " active" : "");
     btn.innerHTML = `${u.avatar} ${u.nome}`;
-    btn.style.cssText = buildFiltroStyle(state.filtroUsuario === u.id);
     btn.onclick = () => {
       state.filtroUsuario = u.id;
       renderFiltroUsuarios();
       renderBoard();
     };
-    bar.appendChild(btn);
+    group.appendChild(btn);
   });
+
+  bar.appendChild(group);
 
   // Insere entre topbar e board
   const main   = document.getElementById("main");
   const topbar = document.getElementById("topbar");
   main.insertBefore(bar, topbar.nextSibling);
-}
 
-function buildFiltroStyle(ativo) {
-  const base = [
-    "display:inline-flex",
-    "align-items:center",
-    "gap:4px",
-    "padding:4px 12px",
-    "border-radius:999px",
-    "border:1px solid var(--border)",
-    "font-size:12px",
-    "cursor:pointer",
-    "transition:all .15s",
-    "font-family:inherit",
-  ].join(";");
-
-  const estado = ativo
-    ? "background:var(--green);color:#fff;border-color:var(--green);"
-    : "background:transparent;color:var(--muted);";
-
-  return base + ";" + estado;
+  // Só faz sentido enquanto o board está na tela — as telas de
+  // concluídas/admin têm seus próprios filtros ou nenhum.
+  bar.classList.toggle("hidden", document.getElementById("board").classList.contains("hidden"));
 }
 
 // ── Board ─────────────────────────────────────────────────
@@ -472,14 +451,12 @@ function buildCard(t) {
 // ── View: Concluídas ──────────────────────────────────────
 document.getElementById("btn-concluded").addEventListener("click", () => {
   document.getElementById("board").classList.add("hidden");
+  document.getElementById("filtro-usuario-bar")?.classList.add("hidden");
   document.getElementById("concluded-screen").classList.add("visible");
   renderConcluded();
 });
 
-document.getElementById("btn-back-board").addEventListener("click", () => {
-  document.getElementById("board").classList.remove("hidden");
-  document.getElementById("concluded-screen").classList.remove("visible");
-});
+document.getElementById("btn-back-board").addEventListener("click", showBoardView);
 
 function dentroDoPeriodo(t, periodo) {
   if (!t.concluidoEm) return false;
@@ -513,6 +490,9 @@ function renderConcluded() {
     return new Date(b.concluidoEm) - new Date(a.concluidoEm);
   });
 
+  document.getElementById("concluded-count").textContent =
+    `${done.length} ${done.length === 1 ? "tarefa" : "tarefas"}`;
+
   if (done.length === 0) {
     list.innerHTML = `<div style="color:var(--muted);font-size:13px;">Nenhuma tarefa concluída${temFiltro ? " com esse filtro" : " ainda"}.</div>`;
     return;
@@ -527,50 +507,46 @@ function renderFiltrosConcluidas() {
 
   const bar = document.createElement("div");
   bar.id = "filtro-concluidas-bar";
-  bar.style.cssText = [
-    "display:flex",
-    "align-items:center",
-    "gap:6px",
-    "flex-wrap:wrap",
-    "padding:8px 24px",
-    "border-bottom:1px solid var(--border)",
-    "background:var(--surface)",
-  ].join(";");
+  bar.className = "filtro-bar";
 
-  const addLabel = txt => {
-    const l = document.createElement("span");
-    l.textContent = txt;
-    l.style.cssText = "font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:4px;";
-    bar.appendChild(l);
+  const addGroup = (labelTxt) => {
+    const group = document.createElement("div");
+    group.className = "filtro-group";
+    const label = document.createElement("span");
+    label.className = "filtro-group-label";
+    label.textContent = labelTxt;
+    group.appendChild(label);
+    bar.appendChild(group);
+    return group;
   };
-  const addBtn = (html, ativo, onClick) => {
+  const addBtn = (group, html, ativo, onClick) => {
     const btn = document.createElement("button");
+    btn.className = "filtro-btn" + (ativo ? " active" : "");
     btn.innerHTML = html;
-    btn.style.cssText = buildFiltroStyle(ativo);
     btn.onclick = onClick;
-    bar.appendChild(btn);
+    group.appendChild(btn);
   };
 
-  addLabel("Concluído por:");
-  addBtn("Todos", state.filtroConcluidoUsuario === null, () => {
+  const groupUser = addGroup("Concluído por");
+  addBtn(groupUser, "Todos", state.filtroConcluidoUsuario === null, () => {
     state.filtroConcluidoUsuario = null;
     renderConcluded();
   });
   state.users.forEach(u => {
-    addBtn(`${u.avatar} ${u.nome}`, state.filtroConcluidoUsuario === u.id, () => {
+    addBtn(groupUser, `${u.avatar} ${u.nome}`, state.filtroConcluidoUsuario === u.id, () => {
       state.filtroConcluidoUsuario = u.id;
       renderConcluded();
     });
   });
 
   const sep = document.createElement("span");
-  sep.style.cssText = "width:1px;align-self:stretch;background:var(--border);margin:0 4px;";
+  sep.className = "filtro-sep";
   bar.appendChild(sep);
 
-  addLabel("Concluído recentemente:");
+  const groupPeriodo = addGroup("Período");
   [["todos", "Todos"], ["hoje", "Hoje"], ["semana", "Últimos 7 dias"], ["mes", "Últimos 30 dias"]]
     .forEach(([key, label]) => {
-      addBtn(label, state.filtroConcluidoPeriodo === key, () => {
+      addBtn(groupPeriodo, label, state.filtroConcluidoPeriodo === key, () => {
         state.filtroConcluidoPeriodo = key;
         renderConcluded();
       });
@@ -585,6 +561,7 @@ function showBoardView() {
   document.getElementById("admin-screen").classList.remove("visible");
   document.getElementById("concluded-screen").classList.remove("visible");
   document.getElementById("board").classList.remove("hidden");
+  document.getElementById("filtro-usuario-bar")?.classList.remove("hidden");
   document.getElementById("nav-board").classList.add("active");
   document.getElementById("nav-admin").classList.remove("active");
 }
@@ -593,6 +570,7 @@ document.getElementById("nav-board").addEventListener("click", showBoardView);
 
 document.getElementById("nav-admin").addEventListener("click", () => {
   document.getElementById("board").classList.add("hidden");
+  document.getElementById("filtro-usuario-bar")?.classList.add("hidden");
   document.getElementById("concluded-screen").classList.remove("visible");
   document.getElementById("admin-screen").classList.add("visible");
   document.getElementById("nav-admin").classList.add("active");

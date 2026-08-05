@@ -159,6 +159,7 @@
           Voltar
         </button>
         <h2>Tarefas Concluídas</h2>
+        <span class="concluded-count" id="concluded-count"></span>
       </div>
       <div class="concluded-list" id="concluded-list">
         <!-- renderizado via JS -->
@@ -329,13 +330,23 @@
             <p class="detail-desc" id="detail-desc">—</p>
           </div>
 
-          <div class="detail-section detail-section-grow">
+          <div class="detail-section detail-section-grow detail-section-etapas">
             <div class="detail-section-title">Etapas</div>
             <div class="checklist" id="detail-checklist"></div>
           </div>
+
+          <div class="detail-section detail-section-fixed">
+            <div class="detail-section-title">Observações</div>
+            <textarea id="detail-obs" placeholder="Adicione observações sobre o andamento..."></textarea>
+          </div>
+
+          <div class="detail-section detail-section-fixed">
+            <div class="detail-section-title">Retorno / Resultado</div>
+            <textarea id="detail-retorno" placeholder="Descreva o resultado ou retorno antes de concluir..."></textarea>
+          </div>
         </div>
 
-        <!-- Coluna direita: meta + atualização + textos -->
+        <!-- Coluna direita: meta + atualização -->
         <div class="detail-col detail-col-right">
           <div class="detail-section">
             <div class="detail-section-title">Informações</div>
@@ -385,16 +396,6 @@
                 <select id="detail-responsavel"></select>
               </div>
             </div>
-          </div>
-
-          <div class="detail-section detail-section-grow">
-            <div class="detail-section-title">Observações</div>
-            <textarea id="detail-obs" placeholder="Adicione observações sobre o andamento..."></textarea>
-          </div>
-
-          <div class="detail-section detail-section-grow">
-            <div class="detail-section-title">Retorno / Resultado</div>
-            <textarea id="detail-retorno" placeholder="Descreva o resultado ou retorno antes de concluir..."></textarea>
           </div>
         </div>
 

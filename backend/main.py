@@ -15,6 +15,11 @@ import os
 import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+
+# Carrega backend/.env se existir (uso local — em produção a env var
+# já vem definida pelo Render, o load_dotenv() vira um no-op).
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 # ── Config ─────────────────────────────────────────────────
 DATABASE_URL = os.environ.get("DATABASE_URL")
