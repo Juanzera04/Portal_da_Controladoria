@@ -1030,27 +1030,13 @@ function openDetail(id) {
   const selStatus = document.getElementById("detail-status-sel");
   selStatus.value = t.status;
   selStatus.onchange = async () => {
-    const statusAnterior      = t.status;
-    const concluidaAnterior   = t.concluida;
-    const concluidoEmAnterior = t.concluidoEm;
-    const concluidoPorAnterior = t.concluidoPor;
-    t.status    = selStatus.value;
-    t.concluida = selStatus.value === "concluida";
-    if (t.concluida && !concluidaAnterior) {
-      t.concluidoEm  = new Date().toISOString();
-      t.concluidoPor = state.current?.id ?? null;
-    }
+    const statusAnterior = t.status;
+    t.status = selStatus.value;
     try {
       await api.atualizarTarefa(t.id, t);
       renderBoard();
-      if (document.getElementById("concluded-screen").classList.contains("visible")) renderConcluded();
-      if (t.concluida && !concluidaAnterior) toast("Tarefa concluída!");
-      else if (!t.concluida && concluidaAnterior) toast("Tarefa reaberta.");
     } catch (err) {
-      t.status       = statusAnterior;
-      t.concluida    = concluidaAnterior;
-      t.concluidoEm  = concluidoEmAnterior;
-      t.concluidoPor = concluidoPorAnterior;
+      t.status = statusAnterior;
       selStatus.value = statusAnterior;
       toast(err.message, true);
     }
@@ -1070,6 +1056,36 @@ function openDetail(id) {
     try { await api.patchTarefa(t.id, { retorno: t.retorno }); }
     catch (err) { toast(err.message, true); }
   }, 600);
+
+  const btnConcluir = document.getElementById("btn-concluir");
+  btnConcluir.textContent = t.concluida ? "Reabrir Tarefa" : "Concluir Tarefa";
+  btnConcluir.className   = t.concluida ? "btn btn-ghost"  : "btn btn-primary";
+
+  btnConcluir.onclick = async () => {
+    const statusAnterior       = t.status;
+    const concluidaAnterior    = t.concluida;
+    const concluidoEmAnterior  = t.concluidoEm;
+    const concluidoPorAnterior = t.concluidoPor;
+    t.concluida = !t.concluida;
+    t.status    = t.concluida ? "concluida" : "pendente";
+    if (t.concluida) {
+      t.concluidoEm  = new Date().toISOString();
+      t.concluidoPor = state.current?.id ?? null;
+    }
+    try {
+      await api.atualizarTarefa(t.id, t);
+      closeDetail();
+      renderBoard();
+      if (document.getElementById("concluded-screen").classList.contains("visible")) renderConcluded();
+      toast(t.concluida ? "Tarefa concluída!" : "Tarefa reaberta.");
+    } catch (err) {
+      t.status       = statusAnterior;
+      t.concluida    = concluidaAnterior;
+      t.concluidoEm  = concluidoEmAnterior;
+      t.concluidoPor = concluidoPorAnterior;
+      toast(err.message, true);
+    }
+  };
 
   modalDetail.classList.remove("hidden");
 }
