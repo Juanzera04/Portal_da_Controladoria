@@ -895,6 +895,7 @@ textarea { resize: vertical; min-height: 70px; }
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   gap: 24px;
+  align-items: start;
 }
 .detail-col {
   min-height: 0;
@@ -905,13 +906,13 @@ textarea { resize: vertical; min-height: 70px; }
 }
 
 .detail-section { flex-shrink: 0; }
-.detail-section-grow {
-  flex: 1 1 auto;
-  min-height: 60px;
+.detail-section-etapas {
   display: flex;
   flex-direction: column;
+  min-height: 56px;
+  max-height: 200px;
 }
-.detail-section-etapas { min-height: 120px; }
+.detail-section-etapas .checklist { flex: 1; min-height: 0; }
 .detail-section-fixed textarea { height: 84px; min-height: 84px; }
 .detail-section-title {
   font-size: 11px;
@@ -960,21 +961,6 @@ textarea { resize: vertical; min-height: 70px; }
   border-color: var(--green);
 }
 .check-label { font-size: 13px; }
-
-/* detail meta row */
-.detail-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-.detail-meta-item .label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
-.detail-meta-item .value { font-size: 13px; font-weight: 500; }
-
-#modal-detail .detail-section-grow textarea {
-  flex: 1;
-  min-height: 0;
-  resize: none;
-}
 
 /* ── Concluded Screen ────────────────────────────────────── */
 #concluded-screen {

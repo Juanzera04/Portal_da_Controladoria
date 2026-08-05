@@ -967,10 +967,6 @@ function openDetail(id) {
     });
   }
 
-  document.getElementById("detail-status").textContent   = labelStatus(t.status);
-  document.getElementById("detail-urgencia").textContent = labelUrgencia(t.urgencia);
-  document.getElementById("detail-prazo").textContent    = labelPrazo(t.prazo, t.dataPrazo);
-
   const selPrazo = document.getElementById("detail-prazo-sel");
   selPrazo.value = t.prazo;
   selPrazo.onchange = async () => {
@@ -979,7 +975,6 @@ function openDetail(id) {
     try {
       await api.atualizarTarefa(t.id, t);
       renderBoard();
-      document.getElementById("detail-prazo").textContent = labelPrazo(t.prazo, t.dataPrazo);
     } catch (err) {
       t.prazo = prazoAnterior;
       selPrazo.value = prazoAnterior;
@@ -994,10 +989,25 @@ function openDetail(id) {
     t.dataPrazo = inputDataPrazo.value || null;
     try {
       await api.atualizarTarefa(t.id, t);
-      document.getElementById("detail-prazo").textContent = labelPrazo(t.prazo, t.dataPrazo);
+      renderBoard();
     } catch (err) {
       t.dataPrazo = dataAnterior;
       inputDataPrazo.value = dataAnterior || "";
+      toast(err.message, true);
+    }
+  };
+
+  const selUrgencia = document.getElementById("detail-urgencia-sel");
+  selUrgencia.value = t.urgencia;
+  selUrgencia.onchange = async () => {
+    const urgenciaAnterior = t.urgencia;
+    t.urgencia = selUrgencia.value;
+    try {
+      await api.atualizarTarefa(t.id, t);
+      renderBoard();
+    } catch (err) {
+      t.urgencia = urgenciaAnterior;
+      selUrgencia.value = urgenciaAnterior;
       toast(err.message, true);
     }
   };
@@ -1033,7 +1043,6 @@ function openDetail(id) {
     try {
       await api.atualizarTarefa(t.id, t);
       renderBoard();
-      document.getElementById("detail-status").textContent = labelStatus(t.status);
       if (document.getElementById("concluded-screen").classList.contains("visible")) renderConcluded();
       if (t.concluida && !concluidaAnterior) toast("Tarefa concluída!");
       else if (!t.concluida && concluidaAnterior) toast("Tarefa reaberta.");
@@ -1082,11 +1091,6 @@ function labelStatus(s) {
 
 function labelUrgencia(u) {
   return { alta: "🔴 Alta", media: "🟡 Média", baixa: "🔵 Baixa" }[u] || u;
-}
-
-function labelPrazo(prazo, dataPrazo) {
-  const tipo = { diaria: "Diária", hoje: "Para hoje", semana: "Para a semana", mes: "Para o mês" }[prazo] || prazo || "—";
-  return dataPrazo ? `${tipo} · ${formatDate(dataPrazo)}` : tipo;
 }
 
 // ── Modal de confirmação (substitui o confirm() nativo) ───
