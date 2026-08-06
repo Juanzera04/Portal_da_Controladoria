@@ -846,6 +846,7 @@ function openCreateModal() {
   });
   sel.value = prevResponsavel;
   document.getElementById("modal-create-overlay").classList.remove("hidden");
+  document.getElementById("input-nome").focus();
 }
 
 function closeCreateModal() {
@@ -1208,6 +1209,35 @@ document.addEventListener("keydown", e => {
     closeAdminTarefaModal();
   } else if (!document.getElementById("modal-admin-usuario-overlay").classList.contains("hidden")) {
     closeAdminUsuarioModal();
+  }
+});
+
+// ── Tab: prender o foco dentro do modal aberto ─────────────
+document.addEventListener("keydown", e => {
+  if (e.key !== "Tab") return;
+  const overlays = document.querySelectorAll(".modal-overlay:not(.hidden)");
+  if (overlays.length === 0) return;
+  const overlay = overlays[overlays.length - 1]; // o último no DOM é o que fica por cima
+
+  const focusables = Array.from(
+    overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+  ).filter(el => !el.disabled && el.offsetParent !== null);
+  if (focusables.length === 0) return;
+
+  const first = focusables[0];
+  const last  = focusables[focusables.length - 1];
+  const dentro = overlay.contains(document.activeElement);
+
+  if (e.shiftKey) {
+    if (!dentro || document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    }
+  } else {
+    if (!dentro || document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 });
 
