@@ -951,7 +951,15 @@ function openDetail(id) {
         <div class="check-box">
           ${etapa.concluida ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
         </div>
-        <span class="check-label">${etapa.texto}</span>`;
+        <span class="check-label">${etapa.texto}</span>
+        <div class="check-actions">
+          <button class="btn-edit-etapa" title="Editar etapa">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="btn-remove-etapa" title="Excluir etapa">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>`;
       item.addEventListener("click", async () => {
         etapa.concluida = !etapa.concluida;
         try {
@@ -960,6 +968,27 @@ function openDetail(id) {
           renderBoard();
         } catch (err) {
           etapa.concluida = !etapa.concluida;
+          toast(err.message, true);
+        }
+      });
+      item.querySelector(".btn-edit-etapa").addEventListener("click", e => {
+        e.stopPropagation();
+        startEditEtapa(t, etapa, item, id);
+      });
+      item.querySelector(".btn-remove-etapa").addEventListener("click", async e => {
+        e.stopPropagation();
+        const ok = await showConfirm(`Excluir a etapa "${etapa.texto}"?`, {
+          title: "Excluir etapa",
+          confirmLabel: "Excluir",
+        });
+        if (!ok) return;
+        t.etapas = t.etapas.filter(e2 => e2 !== etapa);
+        try {
+          await api.atualizarTarefa(t.id, t);
+          openDetail(id);
+          renderBoard();
+          toast("Etapa excluída.");
+        } catch (err) {
           toast(err.message, true);
         }
       });
@@ -1090,6 +1119,42 @@ function openDetail(id) {
   modalDetail.classList.remove("hidden");
 }
 
+function startEditEtapa(t, etapa, item, id) {
+  const label = item.querySelector(".check-label");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "etapa-edit-input";
+  input.value = etapa.texto;
+  label.replaceWith(input);
+  input.focus();
+  input.select();
+  input.addEventListener("click", e => e.stopPropagation());
+
+  let resolved = false;
+  const save = async () => {
+    if (resolved) return;
+    resolved = true;
+    const val = input.value.trim();
+    if (!val || val === etapa.texto) { openDetail(id); return; }
+    const textoAnterior = etapa.texto;
+    etapa.texto = val;
+    try {
+      await api.atualizarTarefa(t.id, t);
+      openDetail(id);
+      renderBoard();
+    } catch (err) {
+      etapa.texto = textoAnterior;
+      toast(err.message, true);
+      openDetail(id);
+    }
+  };
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter")  { e.preventDefault(); save(); }
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); resolved = true; openDetail(id); }
+  });
+  input.addEventListener("blur", save);
+}
+
 function closeDetail() {
   modalDetail.classList.add("hidden");
 }
@@ -1129,6 +1194,39 @@ function resolveConfirm(result) {
 document.getElementById("btn-confirm-ok").addEventListener("click", () => resolveConfirm(true));
 document.getElementById("btn-confirm-cancel").addEventListener("click", () => resolveConfirm(false));
 confirmOverlay.addEventListener("click", e => { if (e.target === confirmOverlay) resolveConfirm(false); });
+
+// ── Fechar modais com Esc ──────────────────────────────────
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!confirmOverlay.classList.contains("hidden")) {
+    resolveConfirm(false);
+  } else if (!document.getElementById("modal-create-overlay").classList.contains("hidden")) {
+    closeCreateModal();
+  } else if (!modalDetail.classList.contains("hidden")) {
+    closeDetail();
+  } else if (!document.getElementById("modal-admin-tarefa-overlay").classList.contains("hidden")) {
+    closeAdminTarefaModal();
+  } else if (!document.getElementById("modal-admin-usuario-overlay").classList.contains("hidden")) {
+    closeAdminUsuarioModal();
+  }
+});
+
+// ── Atalho "N": abrir Nova Tarefa ──────────────────────────
+document.addEventListener("keydown", e => {
+  if (e.key !== "n" && e.key !== "N") return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (!document.getElementById("app").classList.contains("visible")) return;
+
+  const active = document.activeElement;
+  const tag = active?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || active?.isContentEditable) return;
+
+  const anyModalOpen = document.querySelectorAll(".modal-overlay:not(.hidden)").length > 0;
+  if (anyModalOpen) return;
+
+  e.preventDefault();
+  openCreateModal();
+});
 
 function toast(msg, error = false) {
   const c  = document.getElementById("toast-container");
