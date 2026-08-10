@@ -1150,36 +1150,48 @@ function openDetail(id) {
 }
 
 function startEditTitle(t, id) {
+  // Não usa h2.replaceWith(input): o <h2 id="detail-title"> é um elemento
+  // fixo do index.html (não é recriado a cada openDetail, diferente do
+  // .check-label das etapas) -- substituí-lo apagaria o id permanentemente
+  // e quebraria todo openDetail() seguinte ("Cannot set properties of null").
+  // Em vez disso só escondemos o h2 e inserimos o input do lado.
   const h2 = document.getElementById("detail-title");
   const input = document.createElement("input");
   input.type = "text";
   input.className = "detail-title-input";
   input.value = t.nome;
-  h2.replaceWith(input);
+  h2.style.display = "none";
+  h2.insertAdjacentElement("afterend", input);
   input.focus();
   input.select();
 
   let resolved = false;
+  const cleanup = () => {
+    input.remove();
+    h2.style.display = "";
+  };
   const save = async () => {
     if (resolved) return;
     resolved = true;
     const val = input.value.trim();
-    if (!val || val === t.nome) { openDetail(id); return; }
+    if (!val || val === t.nome) { cleanup(); openDetail(id); return; }
     const nomeAnterior = t.nome;
     t.nome = val;
     try {
       await api.patchTarefa(t.id, { nome: t.nome });
+      cleanup();
       openDetail(id);
       renderBoard();
     } catch (err) {
       t.nome = nomeAnterior;
       toast(err.message, true);
+      cleanup();
       openDetail(id);
     }
   };
   input.addEventListener("keydown", e => {
     if (e.key === "Enter")  { e.preventDefault(); save(); }
-    if (e.key === "Escape") { e.preventDefault(); resolved = true; openDetail(id); }
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); resolved = true; cleanup(); openDetail(id); }
   });
   input.addEventListener("blur", save);
 }
