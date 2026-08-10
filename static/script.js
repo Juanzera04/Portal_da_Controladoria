@@ -936,6 +936,12 @@ function openDetail(id) {
   const t = state.tarefas.find(t => t.id === id);
   if (!t) return;
 
+  // Mostra o modal ANTES de mexer nos campos: autoGrowTextarea mede
+  // scrollHeight, e um elemento dentro de display:none sempre mede 0 --
+  // isso fazia os campos abrirem sempre no tamanho mínimo, ignorando o
+  // texto já salvo (que só aparecia no tamanho certo depois de digitar).
+  modalDetail.classList.remove("hidden");
+
   document.getElementById("detail-title").textContent    = t.nome;
   document.getElementById("detail-subtitle").textContent = `Criado em ${formatDate(t.criadoEm)}`;
 
@@ -1153,8 +1159,6 @@ function openDetail(id) {
       toast(err.message, true);
     }
   };
-
-  modalDetail.classList.remove("hidden");
 }
 
 function startEditTitle(t, id) {
@@ -1358,10 +1362,15 @@ function debounce(fn, delay) {
 
 // Ajusta a altura da textarea pro tamanho do conteúdo (mínimo do CSS até
 // maxHeight); zera pra "auto" antes de medir scrollHeight, senão o navegador
-// mede contra a altura antiga em vez do conteúdo atual.
+// mede contra a altura antiga em vez do conteúdo atual. Só liga overflow-y
+// quando realmente precisa cortar (scrollHeight > maxHeight) -- deixar
+// "auto" sempre ligado faz o navegador reservar a barra mesmo sem conteúdo
+// suficiente pra rolar.
 function autoGrowTextarea(el, maxHeight) {
   el.style.height = "auto";
+  const precisa = el.scrollHeight > maxHeight;
   el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
+  el.style.overflowY = precisa ? "auto" : "hidden";
 }
 
 // ── Init ──────────────────────────────────────────────────

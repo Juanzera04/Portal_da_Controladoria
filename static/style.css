@@ -937,7 +937,7 @@ textarea { resize: vertical; min-height: 70px; }
 .detail-section-desc textarea {
   min-height: 34px;
   resize: none;
-  overflow-y: auto;
+  overflow-y: hidden; /* autoGrowTextarea (script.js) liga "auto" só quando o conteúdo passa do teto */
 }
 .detail-section-title {
   font-size: 11px;
