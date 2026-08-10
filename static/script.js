@@ -938,7 +938,16 @@ function openDetail(id) {
 
   document.getElementById("detail-title").textContent    = t.nome;
   document.getElementById("detail-subtitle").textContent = `Criado em ${formatDate(t.criadoEm)}`;
-  document.getElementById("detail-desc").textContent     = t.descricao || "Sem descrição.";
+
+  document.getElementById("btn-edit-title").onclick = () => startEditTitle(t, id);
+
+  const inputDesc = document.getElementById("detail-desc");
+  inputDesc.value = t.descricao || "";
+  inputDesc.oninput = debounce(async () => {
+    t.descricao = inputDesc.value;
+    try { await api.patchTarefa(t.id, { descricao: t.descricao }); }
+    catch (err) { toast(err.message, true); }
+  }, 600);
 
   const checklist = document.getElementById("detail-checklist");
   checklist.innerHTML = "";
@@ -996,6 +1005,26 @@ function openDetail(id) {
       checklist.appendChild(item);
     });
   }
+
+  const inputNovaEtapa = document.getElementById("detail-input-etapa");
+  inputNovaEtapa.value = "";
+  const addEtapaDetail = async () => {
+    const val = inputNovaEtapa.value.trim();
+    if (!val) return;
+    t.etapas.push({ id: Date.now(), texto: val, concluida: false });
+    try {
+      await api.atualizarTarefa(t.id, t);
+      openDetail(id);
+      renderBoard();
+    } catch (err) {
+      t.etapas.pop();
+      toast(err.message, true);
+    }
+  };
+  document.getElementById("btn-detail-add-etapa").onclick = addEtapaDetail;
+  inputNovaEtapa.onkeydown = e => {
+    if (e.key === "Enter") { e.preventDefault(); addEtapaDetail(); }
+  };
 
   const selPrazo = document.getElementById("detail-prazo-sel");
   selPrazo.value = t.prazo;
@@ -1118,6 +1147,41 @@ function openDetail(id) {
   };
 
   modalDetail.classList.remove("hidden");
+}
+
+function startEditTitle(t, id) {
+  const h2 = document.getElementById("detail-title");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "detail-title-input";
+  input.value = t.nome;
+  h2.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let resolved = false;
+  const save = async () => {
+    if (resolved) return;
+    resolved = true;
+    const val = input.value.trim();
+    if (!val || val === t.nome) { openDetail(id); return; }
+    const nomeAnterior = t.nome;
+    t.nome = val;
+    try {
+      await api.patchTarefa(t.id, { nome: t.nome });
+      openDetail(id);
+      renderBoard();
+    } catch (err) {
+      t.nome = nomeAnterior;
+      toast(err.message, true);
+      openDetail(id);
+    }
+  };
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter")  { e.preventDefault(); save(); }
+    if (e.key === "Escape") { e.preventDefault(); resolved = true; openDetail(id); }
+  });
+  input.addEventListener("blur", save);
 }
 
 function startEditEtapa(t, etapa, item, id) {

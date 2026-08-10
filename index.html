@@ -311,7 +311,12 @@
   <div class="modal" id="modal-detail">
     <div class="modal-header">
       <div class="modal-header-info">
-        <h2 id="detail-title">—</h2>
+        <div class="detail-title-row">
+          <h2 id="detail-title">—</h2>
+          <button class="btn-edit-title" id="btn-edit-title" title="Editar título">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+        </div>
         <p id="detail-subtitle">—</p>
       </div>
       <button class="btn-close" id="btn-close-detail">
@@ -326,14 +331,23 @@
 
         <!-- Coluna esquerda: descrição + etapas -->
         <div class="detail-col detail-col-left">
-          <div class="detail-section">
+          <div class="detail-section detail-section-fixed">
             <div class="detail-section-title">Descrição</div>
-            <p class="detail-desc" id="detail-desc">—</p>
+            <textarea id="detail-desc" placeholder="Descreva o objetivo da tarefa..."></textarea>
           </div>
 
           <div class="detail-section detail-section-etapas">
             <div class="detail-section-title">Etapas</div>
             <div class="checklist" id="detail-checklist"></div>
+            <div class="etapa-add-row">
+              <input type="text" id="detail-input-etapa" placeholder="Descreva uma nova etapa..." />
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-detail-add-etapa">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Adicionar
+              </button>
+            </div>
           </div>
 
           <div class="detail-section detail-section-fixed">
