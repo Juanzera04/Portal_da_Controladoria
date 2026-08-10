@@ -883,7 +883,11 @@ textarea { resize: vertical; min-height: 70px; }
 .etapa-add-row input { flex: 1; }
 
 /* ── Detail Modal ────────────────────────────────────────── */
-/* Layout em 2 colunas para caber na tela sem precisar rolar. */
+/* Layout em 2 colunas, pensado pra caber sem rolar com conteúdo normal;
+   cada coluna tem overflow-y:auto (precisa de align-items:stretch no grid
+   pai pra ficar com altura definida) pra ganhar barra de rolagem própria
+   se o conteúdo (descrição/etapas/observações/retorno) passar do espaço
+   disponível, em vez de simplesmente cortar por baixo. */
 #modal-detail {
   max-width: 940px;
   width: 95vw;
@@ -907,7 +911,7 @@ textarea { resize: vertical; min-height: 70px; }
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 .detail-col {
   min-height: 0;
