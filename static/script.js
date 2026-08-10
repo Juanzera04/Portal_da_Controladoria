@@ -943,11 +943,13 @@ function openDetail(id) {
 
   const inputDesc = document.getElementById("detail-desc");
   inputDesc.value = t.descricao || "";
-  inputDesc.oninput = debounce(async () => {
+  autoGrowTextarea(inputDesc, 120);
+  const salvarDescDebounced = debounce(async () => {
     t.descricao = inputDesc.value;
     try { await api.patchTarefa(t.id, { descricao: t.descricao }); }
     catch (err) { toast(err.message, true); }
   }, 600);
+  inputDesc.oninput = () => { autoGrowTextarea(inputDesc, 120); salvarDescDebounced(); };
 
   const checklist = document.getElementById("detail-checklist");
   checklist.innerHTML = "";
@@ -1101,20 +1103,26 @@ function openDetail(id) {
     }
   };
 
-  document.getElementById("detail-obs").value     = t.observacoes || "";
-  document.getElementById("detail-retorno").value = t.retorno || "";
+  const inputObs = document.getElementById("detail-obs");
+  const inputRetorno = document.getElementById("detail-retorno");
+  inputObs.value     = t.observacoes || "";
+  inputRetorno.value = t.retorno || "";
+  autoGrowTextarea(inputObs, 160);
+  autoGrowTextarea(inputRetorno, 160);
 
-  document.getElementById("detail-obs").oninput = debounce(async () => {
-    t.observacoes = document.getElementById("detail-obs").value;
+  const salvarObsDebounced = debounce(async () => {
+    t.observacoes = inputObs.value;
     try { await api.patchTarefa(t.id, { observacoes: t.observacoes }); }
     catch (err) { toast(err.message, true); }
   }, 600);
+  inputObs.oninput = () => { autoGrowTextarea(inputObs, 160); salvarObsDebounced(); };
 
-  document.getElementById("detail-retorno").oninput = debounce(async () => {
-    t.retorno = document.getElementById("detail-retorno").value;
+  const salvarRetornoDebounced = debounce(async () => {
+    t.retorno = inputRetorno.value;
     try { await api.patchTarefa(t.id, { retorno: t.retorno }); }
     catch (err) { toast(err.message, true); }
   }, 600);
+  inputRetorno.oninput = () => { autoGrowTextarea(inputRetorno, 160); salvarRetornoDebounced(); };
 
   const btnConcluir = document.getElementById("btn-concluir");
   btnConcluir.textContent = t.concluida ? "Reabrir Tarefa" : "Concluir Tarefa";
@@ -1346,6 +1354,14 @@ function toast(msg, error = false) {
 function debounce(fn, delay) {
   let timer;
   return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+}
+
+// Ajusta a altura da textarea pro tamanho do conteúdo (mínimo do CSS até
+// maxHeight); zera pra "auto" antes de medir scrollHeight, senão o navegador
+// mede contra a altura antiga em vez do conteúdo atual.
+function autoGrowTextarea(el, maxHeight) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
 }
 
 // ── Init ──────────────────────────────────────────────────

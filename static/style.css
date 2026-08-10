@@ -930,8 +930,15 @@ textarea { resize: vertical; min-height: 70px; }
 }
 .detail-section-etapas .checklist { flex: 1; min-height: 0; }
 .detail-section-etapas .etapa-add-row { flex-shrink: 0; margin-top: 8px; }
-.detail-section-fixed textarea { height: 84px; min-height: 84px; }
-.detail-section-desc textarea { height: 48px; min-height: 44px; }
+/* Altura definida via JS (autoGrowTextarea, em script.js): mínima quando
+   vazio, cresce com o conteúdo digitado até um limite -- mesma ideia da
+   seção Etapas, que também encolhe/cresce conforme tem ou não itens. */
+.detail-section-fixed textarea,
+.detail-section-desc textarea {
+  min-height: 34px;
+  resize: none;
+  overflow-y: auto;
+}
 .detail-section-title {
   font-size: 11px;
   font-weight: 700;
