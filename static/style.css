@@ -246,6 +246,41 @@ html, body {
   opacity: 1;
 }
 
+/* Menu que aparece ao clicar no avatar quando já existe uma foto —
+   deixa escolher entre trocar ou remover, sem precisar ser admin. */
+.avatar-edit-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 16px rgba(0,0,0,.35);
+  overflow: hidden;
+  cursor: default;
+}
+.avatar-edit-menu button {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--white);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.avatar-edit-menu button:hover { background: var(--surface3); }
+.avatar-edit-menu button.danger { color: var(--red); }
+.avatar-edit-menu button + button { border-top: 1px solid var(--border); }
+
 .user-option-info strong {
   display: block;
   font-size: 13px;

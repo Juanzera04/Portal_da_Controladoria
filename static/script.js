@@ -238,9 +238,35 @@ document.getElementById("btn-logout").addEventListener("click", () => {
 // ── Foto de perfil (qualquer usuário, não só admin) ───────
 // Clicar no próprio avatar da sidebar revela o botão de trocar a foto —
 // self-service, sem precisar passar pelo Gerenciador de Base.
+// Se já existe foto, abre um menu com "trocar" ou "remover"; sem foto,
+// vai direto pro seletor de arquivo.
+function closeAvatarEditMenu() {
+  document.getElementById("sb-avatar-edit-menu").classList.add("hidden");
+}
+
 document.getElementById("sb-avatar-edit-wrap").addEventListener("click", () => {
   if (!state.current) return;
+  if (state.current.fotoPerfil) {
+    document.getElementById("sb-avatar-edit-menu").classList.toggle("hidden");
+  } else {
+    document.getElementById("sb-user-foto-input").click();
+  }
+});
+
+document.getElementById("sb-avatar-edit-menu").addEventListener("click", e => e.stopPropagation());
+
+document.addEventListener("click", e => {
+  if (!document.getElementById("sb-avatar-edit-wrap").contains(e.target)) closeAvatarEditMenu();
+});
+
+document.getElementById("sb-avatar-menu-upload").addEventListener("click", () => {
+  closeAvatarEditMenu();
   document.getElementById("sb-user-foto-input").click();
+});
+
+document.getElementById("sb-avatar-menu-remove").addEventListener("click", () => {
+  closeAvatarEditMenu();
+  if (state.current) salvarFotoPerfilAtual(null);
 });
 
 document.getElementById("sb-user-foto-input").addEventListener("change", async e => {
@@ -250,6 +276,14 @@ document.getElementById("sb-user-foto-input").addEventListener("change", async e
 
   try {
     const fotoPerfil = await resizeImageToBase64(file);
+    await salvarFotoPerfilAtual(fotoPerfil);
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
+async function salvarFotoPerfilAtual(fotoPerfil) {
+  try {
     const payload = {
       nome:       state.current.nome,
       cargo:      state.current.cargo,
@@ -265,11 +299,11 @@ document.getElementById("sb-user-foto-input").addEventListener("change", async e
     setAvatarEl(document.getElementById("sb-user-avatar"), state.current);
     renderBoard();
     renderFiltroUsuarios();
-    toast("Foto de perfil atualizada.");
+    toast(fotoPerfil ? "Foto de perfil atualizada." : "Foto de perfil removida.");
   } catch (err) {
     toast(err.message, true);
   }
-});
+}
 
 // ── Filtro de Usuário ─────────────────────────────────────
 function renderFiltroUsuarios() {
