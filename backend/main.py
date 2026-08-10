@@ -59,6 +59,7 @@ def init_db():
                 )
             """)
             cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE")
+            cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS foto_perfil TEXT")
             conn.commit()
 
             # Tabela de tarefas
@@ -156,11 +157,12 @@ def row_to_tarefa(row: dict) -> dict:
 
 def row_to_usuario(row: dict) -> dict:
     return {
-        "id":       row["id"],
-        "nome":     row["nome"],
-        "cargo":    row["cargo"],
-        "avatar":   row["avatar"],
-        "isAdmin":  row.get("is_admin", False),
+        "id":         row["id"],
+        "nome":       row["nome"],
+        "cargo":      row["cargo"],
+        "avatar":     row["avatar"],
+        "isAdmin":    row.get("is_admin", False),
+        "fotoPerfil": row.get("foto_perfil"),
     }
 
 # ── Models ─────────────────────────────────────────────────
@@ -194,6 +196,7 @@ class Usuario(BaseModel):
     cargo: Optional[str] = "Colaborador"
     avatar: Optional[str] = None
     isAdmin: Optional[bool] = False
+    fotoPerfil: Optional[str] = None
 
 # ── Startup ────────────────────────────────────────────────
 @app.on_event("startup")
@@ -355,13 +358,14 @@ def atualizar_usuario(usuario_id: int, usuario: Usuario):
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE usuarios SET
-                    nome=%(nome)s, cargo=%(cargo)s, avatar=%(avatar)s, is_admin=%(is_admin)s
+                    nome=%(nome)s, cargo=%(cargo)s, avatar=%(avatar)s, is_admin=%(is_admin)s,
+                    foto_perfil=%(foto_perfil)s
                 WHERE id=%(id)s
                 RETURNING *
             """, {
                 "id": usuario_id, "nome": usuario.nome,
                 "cargo": usuario.cargo, "avatar": usuario.avatar,
-                "is_admin": usuario.isAdmin,
+                "is_admin": usuario.isAdmin, "foto_perfil": usuario.fotoPerfil,
             })
             conn.commit()
             row = cur.fetchone()

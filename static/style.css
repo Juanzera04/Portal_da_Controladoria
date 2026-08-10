@@ -210,6 +210,41 @@ html, body {
   flex-shrink: 0;
 }
 .avatar.sm { width: 26px; height: 26px; font-size: 9px; }
+.avatar img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.avatar-upload-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.avatar-upload-actions {
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+/* Botão "escondido" pra qualquer usuário trocar a própria foto pela
+   sidebar — só aparece no hover do avatar, sem precisar ser admin. */
+.avatar-edit-wrap {
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.avatar-edit-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .15s;
+  pointer-events: none;
+}
+.avatar-edit-wrap:hover .avatar-edit-overlay {
+  opacity: 1;
+}
 
 .user-option-info strong {
   display: block;

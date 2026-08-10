@@ -107,6 +107,50 @@ function showLoading(on) {
   document.getElementById("loading-overlay").classList.toggle("hidden", !on);
 }
 
+// ── Avatar (foto de perfil) ───────────────────────────────
+// u.fotoPerfil é uma data URL (base64) opcional; sem ela, cai nas iniciais em u.avatar.
+function avatarHTML(u, extraClass = "") {
+  const cls = "avatar" + (extraClass ? " " + extraClass : "");
+  if (u && u.fotoPerfil) {
+    return `<div class="${cls}"><img src="${u.fotoPerfil}" alt=""></div>`;
+  }
+  return `<div class="${cls}">${u ? (u.avatar || "") : ""}</div>`;
+}
+
+function setAvatarEl(el, u) {
+  el.innerHTML = u && u.fotoPerfil
+    ? `<img src="${u.fotoPerfil}" alt="">`
+    : (u ? (u.avatar || "") : "");
+}
+
+// Redimensiona a imagem escolhida no cliente antes de mandar como base64,
+// pra não inflar o banco com fotos em resolução original.
+function resizeImageToBase64(file, maxSize = 160, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Não foi possível ler o arquivo."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Arquivo não é uma imagem válida."));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxSize) { height = Math.round(height * maxSize / width); width = maxSize; }
+        } else {
+          if (height > maxSize) { width = Math.round(width * maxSize / height); height = maxSize; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Login ─────────────────────────────────────────────────
 function renderLoginUsers() {
   const list = document.getElementById("login-user-list");
@@ -116,7 +160,7 @@ function renderLoginUsers() {
     el.className = "user-option";
     el.dataset.id = u.id;
     el.innerHTML = `
-      <div class="avatar">${u.avatar}</div>
+      ${avatarHTML(u)}
       <div class="user-option-info">
         <strong>${u.nome}</strong>
         <span>${u.cargo}</span>
@@ -170,7 +214,7 @@ function enterApp() {
   document.getElementById("app").classList.add("visible");
   document.getElementById("sb-user-name").textContent   = state.current.nome;
   document.getElementById("sb-user-cargo").textContent  = state.current.cargo;
-  document.getElementById("sb-user-avatar").textContent = state.current.avatar;
+  setAvatarEl(document.getElementById("sb-user-avatar"), state.current);
   document.getElementById("nav-admin").classList.toggle("hidden", !state.current.isAdmin);
   renderFiltroUsuarios();
   renderBoard();
@@ -189,6 +233,42 @@ document.getElementById("btn-logout").addEventListener("click", () => {
   if (bar) bar.remove();
   document.getElementById("nav-admin").classList.add("hidden");
   showBoardView();
+});
+
+// ── Foto de perfil (qualquer usuário, não só admin) ───────
+// Clicar no próprio avatar da sidebar revela o botão de trocar a foto —
+// self-service, sem precisar passar pelo Gerenciador de Base.
+document.getElementById("sb-avatar-edit-wrap").addEventListener("click", () => {
+  if (!state.current) return;
+  document.getElementById("sb-user-foto-input").click();
+});
+
+document.getElementById("sb-user-foto-input").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file || !state.current) return;
+
+  try {
+    const fotoPerfil = await resizeImageToBase64(file);
+    const payload = {
+      nome:       state.current.nome,
+      cargo:      state.current.cargo,
+      avatar:     state.current.avatar,
+      isAdmin:    state.current.isAdmin,
+      fotoPerfil,
+    };
+    const atualizado = await api.atualizarUsuario(state.current.id, payload);
+    state.current = atualizado;
+    const idx = state.users.findIndex(u => u.id === atualizado.id);
+    if (idx !== -1) state.users[idx] = atualizado;
+
+    setAvatarEl(document.getElementById("sb-user-avatar"), state.current);
+    renderBoard();
+    renderFiltroUsuarios();
+    toast("Foto de perfil atualizada.");
+  } catch (err) {
+    toast(err.message, true);
+  }
 });
 
 // ── Filtro de Usuário ─────────────────────────────────────
@@ -365,7 +445,7 @@ function buildDiariaCard(t) {
         ? `<span class="badge badge-concluida">Feita hoje</span>`
         : `<span class="badge badge-pendente">Pendente</span>`}
       ${resp
-        ? `<div class="card-resp"><div class="avatar sm">${resp.avatar}</div><span>${resp.nome}</span></div>`
+        ? `<div class="card-resp">${avatarHTML(resp, "sm")}<span>${resp.nome}</span></div>`
         : `<span style="color:var(--muted2)">Sem resp.</span>`}
     </div>
     ${feita ? `<div class="diaria-reset-hint">↻ Será resetada amanhã</div>` : ""}`;
@@ -438,7 +518,7 @@ function buildCard(t) {
       </div>` : ""}
     <div class="card-footer">
       <span class="card-date">${resp ? "" : "Sem resp."}</span>
-      ${resp ? `<div class="card-resp"><div class="avatar sm">${resp.avatar}</div><span>${resp.nome}</span></div>` : ""}
+      ${resp ? `<div class="card-resp">${avatarHTML(resp, "sm")}<span>${resp.nome}</span></div>` : ""}
     </div>
     ${t.concluida && t.concluidoEm ? `
       <div class="card-concluido-info">Concluída em ${formatDate(t.concluidoEm)}${concluidor ? ` por ${concluidor.nome}` : ""}</div>
@@ -762,17 +842,21 @@ document.getElementById("btn-save-admin-tarefa").addEventListener("click", async
 
 // ── Gerenciador de Base: editar usuário ───────────────────
 let adminEditingUsuarioId = null;
+let adminEditingUsuarioFoto = null; // data URL atual (ou null) enquanto o modal está aberto
 
 function openAdminUsuarioModal(id) {
   const u = state.users.find(x => x.id === id);
   if (!u) return;
   adminEditingUsuarioId = id;
+  adminEditingUsuarioFoto = u.fotoPerfil || null;
 
   document.getElementById("admin-usuario-id-label").textContent = `ID ${u.id}`;
   document.getElementById("admin-u-nome").value     = u.nome;
   document.getElementById("admin-u-cargo").value    = u.cargo || "";
   document.getElementById("admin-u-avatar").value   = u.avatar || "";
   document.getElementById("admin-u-isadmin").checked = !!u.isAdmin;
+  setAvatarEl(document.getElementById("admin-u-foto-preview"), u);
+  document.getElementById("admin-u-foto-input").value = "";
 
   document.getElementById("modal-admin-usuario-overlay").classList.remove("hidden");
 }
@@ -780,12 +864,40 @@ function openAdminUsuarioModal(id) {
 function closeAdminUsuarioModal() {
   document.getElementById("modal-admin-usuario-overlay").classList.add("hidden");
   adminEditingUsuarioId = null;
+  adminEditingUsuarioFoto = null;
 }
 
 document.getElementById("btn-close-admin-usuario").addEventListener("click", closeAdminUsuarioModal);
 document.getElementById("btn-cancel-admin-usuario").addEventListener("click", closeAdminUsuarioModal);
 document.getElementById("modal-admin-usuario-overlay").addEventListener("click", e => {
   if (e.target === document.getElementById("modal-admin-usuario-overlay")) closeAdminUsuarioModal();
+});
+
+document.getElementById("btn-admin-u-foto-escolher").addEventListener("click", () => {
+  document.getElementById("admin-u-foto-input").click();
+});
+
+document.getElementById("admin-u-foto-input").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    adminEditingUsuarioFoto = await resizeImageToBase64(file);
+    setAvatarEl(document.getElementById("admin-u-foto-preview"), {
+      fotoPerfil: adminEditingUsuarioFoto,
+      avatar: document.getElementById("admin-u-avatar").value.trim(),
+    });
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
+document.getElementById("btn-admin-u-foto-remover").addEventListener("click", () => {
+  adminEditingUsuarioFoto = null;
+  document.getElementById("admin-u-foto-input").value = "";
+  setAvatarEl(document.getElementById("admin-u-foto-preview"), {
+    fotoPerfil: null,
+    avatar: document.getElementById("admin-u-avatar").value.trim(),
+  });
 });
 
 document.getElementById("btn-save-admin-usuario").addEventListener("click", async () => {
@@ -797,9 +909,10 @@ document.getElementById("btn-save-admin-usuario").addEventListener("click", asyn
 
   const payload = {
     nome,
-    cargo:   document.getElementById("admin-u-cargo").value.trim() || "Colaborador",
-    avatar:  document.getElementById("admin-u-avatar").value.trim() || null,
-    isAdmin: document.getElementById("admin-u-isadmin").checked,
+    cargo:      document.getElementById("admin-u-cargo").value.trim() || "Colaborador",
+    avatar:     document.getElementById("admin-u-avatar").value.trim() || null,
+    isAdmin:    document.getElementById("admin-u-isadmin").checked,
+    fotoPerfil: adminEditingUsuarioFoto,
   };
 
   try {
@@ -813,7 +926,7 @@ document.getElementById("btn-save-admin-usuario").addEventListener("click", asyn
       state.current = u;
       document.getElementById("sb-user-name").textContent   = u.nome;
       document.getElementById("sb-user-cargo").textContent  = u.cargo;
-      document.getElementById("sb-user-avatar").textContent = u.avatar;
+      setAvatarEl(document.getElementById("sb-user-avatar"), u);
       document.getElementById("nav-admin").classList.toggle("hidden", !u.isAdmin);
     }
     toast("Usuário atualizado.");

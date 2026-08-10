@@ -86,3 +86,30 @@ A documentação da API em: **http://localhost:8000/docs**
 |---|---|---|
 | GET | `/api/usuarios` | Lista todos os usuários |
 | POST | `/api/usuarios` | Cria um novo usuário |
+| PUT | `/api/usuarios/{id}` | Atualiza um usuário completo (inclui `fotoPerfil`) |
+| DELETE | `/api/usuarios/{id}` | Remove um usuário |
+
+---
+
+## Foto de Perfil
+
+Cada usuário tem um campo `fotoPerfil`, salvo como base64 (data URL) na
+coluna `foto_perfil` da tabela `usuarios`. Quando não há foto, o avatar
+volta a mostrar as iniciais do campo `avatar` (comportamento original).
+
+**Quem pode trocar:**
+- **Qualquer usuário** pode trocar a própria foto passando o mouse sobre
+  o avatar na barra lateral — aparece um ícone de câmera; ao clicar, abre
+  o seletor de arquivo. Não precisa ser admin.
+- **Admins** também podem definir ou remover a foto de qualquer usuário
+  em **Gerenciador de Base → Usuários → Editar**.
+
+**Detalhes técnicos:**
+- A imagem é redimensionada no navegador (máx. 160px, JPEG ~82% de
+  qualidade) antes do envio, para não inflar o banco.
+- A coluna é criada automaticamente na inicialização
+  (`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS foto_perfil TEXT`) —
+  não exige migração manual.
+- Para reverter por completo: remover o código relacionado e rodar
+  `ALTER TABLE usuarios DROP COLUMN foto_perfil;` (a coluna é aditiva,
+  não afeta nada que já existia).
