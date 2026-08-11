@@ -61,6 +61,14 @@
   --green-dim:    #ea580c;
   --green-glow:   rgba(249,115,22,.18);
   --green-subtle: #f9731614;
+
+  }
+:root[data-accent="pink"] {
+  --green:        #ec4899;
+  --green-dim:    #db2777;
+  --green-glow:   rgba(236,72,153,.18);
+  --green-subtle: #ec489914;
+
 }
 
 html, body {
