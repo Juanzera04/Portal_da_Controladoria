@@ -709,15 +709,17 @@ textarea { resize: vertical; min-height: 70px; }
   color: var(--muted);
 }
 
-.diaria-top {
+.diaria-top,
+.card-title-row {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   margin-bottom: 8px;
 }
-.diaria-top .card-title { margin-bottom: 0; flex: 1; }
+.diaria-top .card-title,
+.card-title-row .card-title { margin-bottom: 0; flex: 1; }
 
-.diaria-delete {
+.card-delete-btn {
   background: transparent;
   border: none;
   color: var(--muted2);
@@ -730,8 +732,9 @@ textarea { resize: vertical; min-height: 70px; }
   transition: var(--transition);
   opacity: 0;
 }
-.task-card-diaria:hover .diaria-delete { opacity: 1; }
-.diaria-delete:hover { color: var(--red); background: rgba(239,68,68,.1); }
+.task-card-diaria:hover .card-delete-btn,
+.task-card:hover .card-delete-btn { opacity: 1; }
+.card-delete-btn:hover { color: var(--red); background: rgba(239,68,68,.1); }
 
 .diaria-checkbox {
   width: 20px; height: 20px;

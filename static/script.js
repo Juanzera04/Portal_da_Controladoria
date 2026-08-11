@@ -464,7 +464,7 @@ function buildDiariaCard(t) {
         ${feita ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
       </button>
       <div class="card-title diaria-title">${t.nome}</div>
-      <button class="diaria-delete" title="Excluir tarefa diária">
+      <button class="card-delete-btn" title="Excluir tarefa diária">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -496,7 +496,7 @@ function buildDiariaCard(t) {
     }
   });
 
-  el.querySelector(".diaria-delete").addEventListener("click", async e => {
+  el.querySelector(".card-delete-btn").addEventListener("click", async e => {
     e.stopPropagation();
     const ok = await showConfirm(`Excluir a tarefa diária "${t.nome}" permanentemente? Essa ação não pode ser desfeita.`);
     if (!ok) return;
@@ -539,7 +539,17 @@ function buildCard(t) {
     : null;
 
   el.innerHTML = `
-    <div class="card-title">${t.nome}</div>
+    <div class="card-title-row">
+      <div class="card-title">${t.nome}</div>
+      <button class="card-delete-btn" title="Excluir tarefa">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </button>
+    </div>
     <div class="card-meta">
       <div class="urgency-dot ${urgClass}"></div>
       <span class="badge ${statusClass}">${statusLabel}</span>
@@ -557,6 +567,21 @@ function buildCard(t) {
     ${t.concluida && t.concluidoEm ? `
       <div class="card-concluido-info">Concluída em ${formatDate(t.concluidoEm)}${concluidor ? ` por ${concluidor.nome}` : ""}</div>
     ` : ""}`;
+
+  el.querySelector(".card-delete-btn").addEventListener("click", async e => {
+    e.stopPropagation();
+    const ok = await showConfirm(`Excluir a tarefa "${t.nome}" permanentemente? Essa ação não pode ser desfeita.`);
+    if (!ok) return;
+    try {
+      await api.deletarTarefa(t.id);
+      state.tarefas = state.tarefas.filter(x => x.id !== t.id);
+      renderBoard();
+      if (document.getElementById("concluded-screen").classList.contains("visible")) renderConcluded();
+      toast("Tarefa excluída.");
+    } catch (err) {
+      toast(err.message, true);
+    }
+  });
 
   el.addEventListener("click", () => openDetail(t.id));
   return el;
