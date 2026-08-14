@@ -86,6 +86,16 @@ def init_db():
 
             cur.execute("ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS concluido_em TEXT")
             cur.execute("ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS concluido_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL")
+            cur.execute("""
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'tarefas' AND column_name = 'aviso_confirmado'
+            """)
+            coluna_aviso_ja_existia = cur.fetchone() is not None
+            cur.execute("ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS aviso_confirmado BOOLEAN DEFAULT FALSE")
+            if not coluna_aviso_ja_existia:
+                # Tarefas criadas antes da existência do aviso não devem disparar
+                # o aviso retroativamente — só tarefas novas a partir daqui.
+                cur.execute("UPDATE tarefas SET aviso_confirmado = TRUE")
             conn.commit()
 
             # Importa usuários do JSON só se a tabela estiver vazia
@@ -153,6 +163,7 @@ def row_to_tarefa(row: dict) -> dict:
         "diariaFeitaEm":  row["diaria_feita_em"],
         "concluidoEm":    row["concluido_em"],
         "concluidoPor":   row["concluido_por"],
+        "avisoConfirmado": row["aviso_confirmado"],
     }
 
 def row_to_usuario(row: dict) -> dict:
@@ -189,6 +200,7 @@ class Tarefa(BaseModel):
     diariaFeitaEm: Optional[str] = None
     concluidoEm: Optional[str] = None
     concluidoPor: Optional[int] = None
+    avisoConfirmado: Optional[bool] = False
 
 class Usuario(BaseModel):
     id: Optional[int] = None
@@ -285,6 +297,7 @@ def patch_tarefa(tarefa_id: int, campos: dict):
         "observacoes": "observacoes", "retorno": "retorno",
         "concluida": "concluida", "diariaFeitaEm": "diaria_feita_em",
         "concluidoEm": "concluido_em", "concluidoPor": "concluido_por",
+        "avisoConfirmado": "aviso_confirmado",
     }
     sets, values = [], []
     for key, val in campos.items():

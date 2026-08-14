@@ -218,6 +218,44 @@ function enterApp() {
   document.getElementById("nav-admin").classList.toggle("hidden", !state.current.isAdmin);
   renderFiltroUsuarios();
   renderBoard();
+  checkAvisoNovasTarefas();
+}
+
+// ── Aviso de novas tarefas atribuídas ──────────────────────
+// Mostra uma única vez por tarefa: quando alguém cria/atribui uma tarefa
+// para outra pessoa, o responsável vê um aviso na próxima vez que entrar
+// no portal. Depois de confirmar ("Ciente"), aviso_confirmado vira true
+// e a tarefa não aparece mais nesse aviso.
+function checkAvisoNovasTarefas() {
+  const pendentes = state.tarefas.filter(t =>
+    t.responsavel === state.current.id &&
+    t.criadoPor && t.criadoPor !== state.current.id &&
+    !t.avisoConfirmado
+  );
+  if (pendentes.length === 0) return;
+
+  const list = document.getElementById("aviso-tarefas-list");
+  list.innerHTML = "";
+  pendentes.forEach(t => {
+    const autor = state.users.find(u => u.id === t.criadoPor);
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${t.nome}</strong><span>Criada por ${autor ? autor.nome : "alguém"}</span>`;
+    list.appendChild(li);
+  });
+
+  document.getElementById("modal-aviso-overlay").classList.remove("hidden");
+
+  document.getElementById("btn-aviso-ciente").onclick = async () => {
+    document.getElementById("modal-aviso-overlay").classList.add("hidden");
+    try {
+      await Promise.all(pendentes.map(t => {
+        t.avisoConfirmado = true;
+        return api.patchTarefa(t.id, { avisoConfirmado: true });
+      }));
+    } catch (err) {
+      toast(err.message, true);
+    }
+  };
 }
 
 document.getElementById("btn-logout").addEventListener("click", () => {
